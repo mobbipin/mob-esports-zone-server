@@ -17,18 +17,18 @@ const UpdatePlayerSchema = z.object({
 export const getPlayer = async (c: any) => {
   const { id } = c.req.param();
   const { results } = await c.env.DB.prepare('SELECT * FROM PlayerProfile WHERE userId = ?').bind(id).all();
-  if (!results.length) return c.json({ error: 'Player not found' }, 404);
+  if (!results.length) return c.json({ status: false, error: 'Player not found' }, 404);
   const player = results[0];
   if (player.social) player.social = JSON.parse(player.social);
   if (player.achievements) player.achievements = JSON.parse(player.achievements);
-  return c.json(player);
+  return c.json({ status: true, data: player });
 };
 
 export const updatePlayer = async (c: any) => {
   const { id } = c.req.param();
   const data = await c.req.json();
   const parse = UpdatePlayerSchema.safeParse(data);
-  if (!parse.success) return c.json({ error: parse.error.flatten() }, 400);
+  if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
   const updateData: any = { ...parse.data };
   if (updateData.social) updateData.social = JSON.stringify(updateData.social);
   if (updateData.achievements) updateData.achievements = JSON.stringify(updateData.achievements);
@@ -40,11 +40,11 @@ export const updatePlayer = async (c: any) => {
       values.push(updateData[key]);
     }
   }
-  if (!fields.length) return c.json({ error: 'No fields to update' }, 400);
+  if (!fields.length) return c.json({ status: false, error: 'No fields to update' }, 400);
   values.push(id);
   const sql = `UPDATE PlayerProfile SET ${fields.join(', ')} WHERE userId = ?`;
   await c.env.DB.prepare(sql).bind(...values).run();
-  return c.json({ message: 'Profile updated' });
+  return c.json({ status: true, message: 'Profile updated' });
 };
 
 export const listPlayers = async (c: any) => {
@@ -65,5 +65,5 @@ export const listPlayers = async (c: any) => {
     if (p.social) p.social = JSON.parse(p.social);
     if (p.achievements) p.achievements = JSON.parse(p.achievements);
   }
-  return c.json(results);
+  return c.json({ status: true, data: results });
 }; 

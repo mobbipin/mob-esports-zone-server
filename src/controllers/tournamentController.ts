@@ -25,13 +25,13 @@ const MatchSchema = z.object({
 export const createTournament = async (c: any) => {
   const data = await c.req.json();
   const parse = TournamentSchema.safeParse(data);
-  if (!parse.success) return c.json({ error: parse.error.flatten() }, 400);
+  if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
   const { name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules } = parse.data;
   const id = nanoid();
   await c.env.DB.prepare(
     'INSERT INTO Tournament (id, name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   ).bind(id, name, description ?? null, game, startDate, endDate, maxTeams, prizePool ?? null, entryFee ?? null, rules ?? null, 'upcoming').run();
-  return c.json({ id, message: 'Tournament created' });
+  return c.json({ status: true, data: { id }, message: 'Tournament created' });
 };
 
 export const listTournaments = async (c: any) => {
@@ -48,26 +48,26 @@ export const listTournaments = async (c: any) => {
   sql += ' ORDER BY startDate DESC LIMIT ? OFFSET ?';
   params.push(limitNum, offset);
   const { results } = await c.env.DB.prepare(sql).bind(...params).all();
-  return c.json(results);
+  return c.json({ status: true, data: results });
 };
 
 export const getTournament = async (c: any) => {
   const { id } = c.req.param();
   const { results } = await c.env.DB.prepare('SELECT * FROM Tournament WHERE id = ?').bind(id).all();
-  if (!results.length) return c.json({ error: 'Tournament not found' }, 404);
+  if (!results.length) return c.json({ status: false, error: 'Tournament not found' }, 404);
   const tournament = results[0];
   // Get registered teams
   const { results: teams } = await c.env.DB.prepare('SELECT * FROM TournamentRegistration WHERE tournamentId = ?').bind(id).all();
   // Get matches
   const { results: matches } = await c.env.DB.prepare('SELECT * FROM Match WHERE tournamentId = ? ORDER BY round, matchNumber').bind(id).all();
-  return c.json({ ...tournament, teams, matches });
+  return c.json({ status: true, data: { ...tournament, teams, matches } });
 };
 
 export const updateTournament = async (c: any) => {
   const { id } = c.req.param();
   const data = await c.req.json();
   const parse = TournamentSchema.partial().safeParse(data);
-  if (!parse.success) return c.json({ error: parse.error.flatten() }, 400);
+  if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
   const fields = [];
   const values = [];
   for (const key in parse.data) {
@@ -76,11 +76,11 @@ export const updateTournament = async (c: any) => {
       values.push((parse.data as any)[key]);
     }
   }
-  if (!fields.length) return c.json({ error: 'No fields to update' }, 400);
+  if (!fields.length) return c.json({ status: false, error: 'No fields to update' }, 400);
   values.push(id);
   const sql = `UPDATE Tournament SET ${fields.join(', ')} WHERE id = ?`;
   await c.env.DB.prepare(sql).bind(...values).run();
-  return c.json({ message: 'Tournament updated' });
+  return c.json({ status: true, message: 'Tournament updated' });
 };
 
 export const deleteTournament = async (c: any) => {
@@ -88,7 +88,7 @@ export const deleteTournament = async (c: any) => {
   await c.env.DB.prepare('DELETE FROM Tournament WHERE id = ?').bind(id).run();
   await c.env.DB.prepare('DELETE FROM TournamentRegistration WHERE tournamentId = ?').bind(id).run();
   await c.env.DB.prepare('DELETE FROM Match WHERE tournamentId = ?').bind(id).run();
-  return c.json({ message: 'Tournament deleted' });
+  return c.json({ status: true, message: 'Tournament deleted' });
 };
 
 export const registerTeam = async (c: any) => {
@@ -97,14 +97,14 @@ export const registerTeam = async (c: any) => {
   await c.env.DB.prepare(
     'INSERT INTO TournamentRegistration (tournamentId, teamId, registeredAt) VALUES (?, ?, ?)'
   ).bind(id, teamId, new Date().toISOString()).run();
-  return c.json({ message: 'Team registered' });
+  return c.json({ status: true, message: 'Team registered' });
 };
 
 export const createBracket = async (c: any) => {
   const { id } = c.req.param();
   // Get registered teams
   const { results: teams } = await c.env.DB.prepare('SELECT * FROM TournamentRegistration WHERE tournamentId = ?').bind(id).all();
-  if (teams.length < 2) return c.json({ error: 'Need at least 2 teams' }, 400);
+  if (teams.length < 2) return c.json({ status: false, error: 'Need at least 2 teams' }, 400);
   // Generate bracket matches (simple single elimination)
   const rounds = Math.ceil(Math.log2(teams.length));
   let matchNumber = 1;
@@ -122,14 +122,14 @@ export const createBracket = async (c: any) => {
       matchNumber++;
     }
   }
-  return c.json({ message: 'Bracket created' });
+  return c.json({ status: true, message: 'Bracket created' });
 };
 
 export const updateMatch = async (c: any) => {
   const { id } = c.req.param();
   const data = await c.req.json();
   const parse = MatchSchema.partial().safeParse(data);
-  if (!parse.success) return c.json({ error: parse.error.flatten() }, 400);
+  if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
   const fields = [];
   const values = [];
   for (const key in parse.data) {
@@ -138,9 +138,9 @@ export const updateMatch = async (c: any) => {
       values.push((parse.data as any)[key]);
     }
   }
-  if (!fields.length) return c.json({ error: 'No fields to update' }, 400);
+  if (!fields.length) return c.json({ status: false, error: 'No fields to update' }, 400);
   values.push(id);
   const sql = `UPDATE Match SET ${fields.join(', ')} WHERE id = ?`;
   await c.env.DB.prepare(sql).bind(...values).run();
-  return c.json({ message: 'Match updated' });
+  return c.json({ status: true, message: 'Match updated' });
 }; 
