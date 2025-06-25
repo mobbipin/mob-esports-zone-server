@@ -10,6 +10,8 @@ import { cors } from './middleware/cors'
 
 const app = new Hono()
 
+app.get('/', (c) => c.text('Hello Hono ! I am MOB ESPORTS SERVER'))
+
 app.use('*', cors)
 app.route('/auth', auth)
 app.route('/players', players)
