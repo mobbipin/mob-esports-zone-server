@@ -1,22 +1,32 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "mob-esports-server",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-06-24",
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "mob-esports-server",
+    "main": "src/index.ts",
+    "compatibility_date": "2025-06-24",
     "compatibility_flags": ["nodejs_compat"],
+  
+    // Environment variables
+    "vars": {
+      "JWT_SECRET": "thisisMysecret2323Keyforjwt",
+      "ADMIN_REGISTRATION_CODE": "MOB_ADMIN_2024"
+    },
+  
+    // D1 Database
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "mobesports-zone-db",
+        "database_id": "61a2a364-938a-4a93-9a3a-30b2acd62e82",
+        "migrations_dir": "drizzle"
+      }
+    ],
+  
+    // R2 Storage
     "r2_buckets": [
       {
         "binding": "R2_BUCKET",
         "bucket_name": "mobesportszone",
         "preview_bucket_name": "mobesportszone-preview"
       }
-    ],
-    "d1_databases": [
-      {
-        "binding": "DB",
-        "database_name": "mob-esports-zone-db",
-        "database_id": "61a2a364-938a-4a93-9a3a-30b2acd62e82",
-        "migrations_dir": "drizzle"
-      }
     ]
-}
+  }
