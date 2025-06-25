@@ -6,13 +6,11 @@ import tournaments from './routes/tournaments'
 import posts from './routes/posts'
 import upload from './routes/upload'
 import admin from './routes/admin'
-import { cors } from './middleware/cors'
 
 const app = new Hono()
 
 app.get('/', (c) => c.text('Hello Hono ! I am MOB ESPORTS SERVER'))
 
-app.use('*', cors)
 app.route('/auth', auth)
 app.route('/players', players)
 app.route('/teams', teams)
