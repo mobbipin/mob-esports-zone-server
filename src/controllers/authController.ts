@@ -1,38 +1,49 @@
-import { getDb } from '../db/drizzle';
-import { User, PlayerProfile } from '../db/models';
-import { signJwt, verifyJwt } from '../utils/jwt';
+import { signJwt } from '../utils/jwt';
 import { hashPassword, verifyPassword } from '../utils/hash';
 import { nanoid } from 'nanoid';
-import { eq } from 'drizzle-orm';
+import { z } from 'zod';
+
+const RegisterSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  role: z.enum(['player', 'admin']),
+  username: z.string().min(2).max(32).optional(),
+  displayName: z.string().min(2).max(64).optional()
+});
+
+const LoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6)
+});
 
 export const register = async (c: any) => {
-  const db = getDb(c.env);
-  const { email, password, role, username, displayName } = await c.req.json();
+  const data = await c.req.json();
+  const parse = RegisterSchema.safeParse(data);
+  if (!parse.success) return c.json({ error: parse.error.flatten() }, 400);
+  const { email, password, role, username, displayName } = parse.data;
   const userId = nanoid();
   const passwordHash = await hashPassword(password);
   // Check if email exists
-  const exists = await db.select().from(User).where(eq(User.email, email)).get();
-  if (exists) return c.json({ error: 'Email already registered' }, 400);
-  await db.insert(User).values({
-    id: userId,
-    email,
-    passwordHash,
-    role,
-    username,
-    displayName,
-    createdAt: new Date().toISOString()
-  });
+  const { results: exists } = await c.env.DB.prepare('SELECT * FROM User WHERE email = ?').bind(email).all();
+  if (exists.length) return c.json({ error: 'Email already registered' }, 400);
+  await c.env.DB.prepare(
+    'INSERT INTO User (id, email, passwordHash, role, username, displayName, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)' +
+    ''
+  ).bind(userId, email, passwordHash, role, username ?? null, displayName ?? null, new Date().toISOString()).run();
   if (role === 'player') {
-    await db.insert(PlayerProfile).values({ userId });
+    await c.env.DB.prepare('INSERT INTO PlayerProfile (userId) VALUES (?)').bind(userId).run();
   }
   return c.json({ message: 'Registered successfully' });
 };
 
 export const login = async (c: any) => {
-  const db = getDb(c.env);
-  const { email, password } = await c.req.json();
-  const user = await db.select().from(User).where(eq(User.email, email)).get();
-  if (!user) return c.json({ error: 'Invalid credentials' }, 401);
+  const data = await c.req.json();
+  const parse = LoginSchema.safeParse(data);
+  if (!parse.success) return c.json({ error: parse.error.flatten() }, 400);
+  const { email, password } = parse.data;
+  const { results } = await c.env.DB.prepare('SELECT * FROM User WHERE email = ?').bind(email).all();
+  if (!results.length) return c.json({ error: 'Invalid credentials' }, 401);
+  const user = results[0];
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) return c.json({ error: 'Invalid credentials' }, 401);
   const token = await signJwt({ id: user.id, role: user.role, email: user.email }, c.env.JWT_SECRET);
@@ -43,16 +54,19 @@ export const login = async (c: any) => {
 };
 
 export const me = async (c: any) => {
-  const db = getDb(c.env);
   const user = c.get('user');
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
-  const dbUser = await db.select().from(User).where(eq(User.id, user.id)).get();
-  if (!dbUser) return c.json({ error: 'User not found' }, 404);
+  const { results } = await c.env.DB.prepare('SELECT * FROM User WHERE id = ?').bind(user.id).all();
+  if (!results.length) return c.json({ error: 'User not found' }, 404);
+  const dbUser = results[0];
   let playerProfile = null;
   if (dbUser.role === 'player') {
-    playerProfile = await db.select().from(PlayerProfile).where(eq(PlayerProfile.userId, dbUser.id)).get();
-    if (playerProfile && playerProfile.social) playerProfile.social = JSON.parse(playerProfile.social);
-    if (playerProfile && playerProfile.achievements) playerProfile.achievements = JSON.parse(playerProfile.achievements);
+    const { results: profiles } = await c.env.DB.prepare('SELECT * FROM PlayerProfile WHERE userId = ?').bind(dbUser.id).all();
+    if (profiles.length) {
+      playerProfile = profiles[0];
+      if (playerProfile.social) playerProfile.social = JSON.parse(playerProfile.social);
+      if (playerProfile.achievements) playerProfile.achievements = JSON.parse(playerProfile.achievements);
+    }
   }
   return c.json({
     id: dbUser.id,
