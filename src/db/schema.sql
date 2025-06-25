@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS User (
   email TEXT UNIQUE NOT NULL,
   passwordHash TEXT NOT NULL,
   role TEXT NOT NULL CHECK(role IN ('player', 'admin')),
+  username TEXT,
+  displayName TEXT,
   createdAt TEXT NOT NULL
 );
 
@@ -11,16 +13,27 @@ CREATE TABLE IF NOT EXISTS User (
 CREATE TABLE IF NOT EXISTS PlayerProfile (
   userId TEXT PRIMARY KEY REFERENCES User(id),
   bio TEXT,
+  region TEXT,
   gameId TEXT,
-  avatar TEXT
+  avatar TEXT,
+  rank TEXT,
+  winRate REAL,
+  kills INTEGER,
+  social TEXT, -- JSON string: { twitch, discord }
+  achievements TEXT -- JSON array string
 );
 
 -- Team table
 CREATE TABLE IF NOT EXISTS Team (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  tag TEXT,
+  bio TEXT,
   logoUrl TEXT,
-  ownerId TEXT NOT NULL REFERENCES User(id)
+  region TEXT,
+  ownerId TEXT NOT NULL REFERENCES User(id),
+  matchesPlayed INTEGER DEFAULT 0,
+  wins INTEGER DEFAULT 0
 );
 
 -- TeamMembership table
@@ -38,7 +51,15 @@ CREATE TABLE IF NOT EXISTS Tournament (
   type TEXT NOT NULL,
   date TEXT NOT NULL,
   status TEXT NOT NULL,
-  createdBy TEXT NOT NULL REFERENCES User(id)
+  createdBy TEXT NOT NULL REFERENCES User(id),
+  rules TEXT,
+  bannerUrl TEXT,
+  maxTeams INTEGER,
+  registrationDeadline TEXT,
+  prizePool TEXT,
+  isOnline INTEGER,
+  mapPool TEXT, -- JSON array string
+  contactDiscord TEXT
 );
 
 -- Registration table
@@ -56,7 +77,12 @@ CREATE TABLE IF NOT EXISTS Match (
   teamBId TEXT NOT NULL REFERENCES Team(id),
   scoreA INTEGER,
   scoreB INTEGER,
-  winnerId TEXT REFERENCES Team(id)
+  winnerId TEXT REFERENCES Team(id),
+  round TEXT,
+  map TEXT,
+  format TEXT,
+  matchTime TEXT,
+  maxPoints INTEGER
 );
 
 -- Post table
