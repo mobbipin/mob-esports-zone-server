@@ -14,7 +14,7 @@
     "d1_databases": [
       {
         "binding": "DB",
-        "database_name": "mobesportszomato-db",
+        "database_name": "mobesportszone-db",
         "database_id": "61a2a364-938a-4a93-9a3a-30b2acd62e82",
         "migrations_dir": "drizzle"
       }
