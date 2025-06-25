@@ -44,45 +44,43 @@ CREATE TABLE IF NOT EXISTS TeamMembership (
   PRIMARY KEY (userId, teamId)
 );
 
--- Tournament table
+-- Tournament table (updated to match our controller usage)
 CREATE TABLE IF NOT EXISTS Tournament (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  type TEXT NOT NULL,
-  date TEXT NOT NULL,
-  status TEXT NOT NULL,
-  createdBy TEXT NOT NULL REFERENCES User(id),
+  description TEXT,
+  game TEXT NOT NULL,
+  startDate TEXT NOT NULL,
+  endDate TEXT NOT NULL,
+  maxTeams INTEGER NOT NULL,
+  prizePool REAL,
+  entryFee REAL,
   rules TEXT,
-  bannerUrl TEXT,
-  maxTeams INTEGER,
-  registrationDeadline TEXT,
-  prizePool TEXT,
-  isOnline INTEGER,
-  mapPool TEXT, -- JSON array string
-  contactDiscord TEXT
+  status TEXT NOT NULL DEFAULT 'upcoming',
+  createdBy TEXT NOT NULL REFERENCES User(id),
+  createdAt TEXT NOT NULL
 );
 
--- Registration table
-CREATE TABLE IF NOT EXISTS Registration (
-  teamId TEXT NOT NULL REFERENCES Team(id),
+-- TournamentRegistration table (for team registrations)
+CREATE TABLE IF NOT EXISTS TournamentRegistration (
   tournamentId TEXT NOT NULL REFERENCES Tournament(id),
-  PRIMARY KEY (teamId, tournamentId)
+  teamId TEXT NOT NULL REFERENCES Team(id),
+  registeredAt TEXT NOT NULL,
+  PRIMARY KEY (tournamentId, teamId)
 );
 
--- Match table
+-- Match table (updated to match our controller usage)
 CREATE TABLE IF NOT EXISTS Match (
   id TEXT PRIMARY KEY,
   tournamentId TEXT NOT NULL REFERENCES Tournament(id),
-  teamAId TEXT NOT NULL REFERENCES Team(id),
-  teamBId TEXT NOT NULL REFERENCES Team(id),
-  scoreA INTEGER,
-  scoreB INTEGER,
+  team1Id TEXT REFERENCES Team(id),
+  team2Id TEXT REFERENCES Team(id),
+  round INTEGER NOT NULL,
+  matchNumber INTEGER NOT NULL,
   winnerId TEXT REFERENCES Team(id),
-  round TEXT,
-  map TEXT,
-  format TEXT,
-  matchTime TEXT,
-  maxPoints INTEGER
+  score1 INTEGER,
+  score2 INTEGER,
+  status TEXT DEFAULT 'pending'
 );
 
 -- Post table
@@ -93,4 +91,15 @@ CREATE TABLE IF NOT EXISTS Post (
   imageUrl TEXT,
   createdBy TEXT NOT NULL REFERENCES User(id),
   createdAt TEXT NOT NULL
+);
+
+-- FileUpload table
+CREATE TABLE IF NOT EXISTS FileUpload (
+  id TEXT PRIMARY KEY,
+  fileName TEXT NOT NULL,
+  fileType TEXT NOT NULL,
+  fileSize INTEGER NOT NULL,
+  fileUrl TEXT NOT NULL,
+  uploadedBy TEXT NOT NULL REFERENCES User(id),
+  uploadDate TEXT NOT NULL
 ); 

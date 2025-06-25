@@ -54,11 +54,23 @@ export const login = async (c: any) => {
   if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
   
   const { email, password } = parse.data;
+  
+  console.log('Login attempt for email:', email);
+  
   const { results } = await c.env.DB.prepare('SELECT * FROM User WHERE email = ?').bind(email).all();
+  
+  console.log('Database results:', results.length, results.length > 0 ? 'User found' : 'User not found');
+  
   if (!results.length) return c.json({ status: false, error: 'Invalid credentials' }, 401);
   
   const user = results[0];
+  
+  console.log('User found:', { id: user.id, email: user.email, role: user.role });
+  
   const valid = await verifyPassword(password, user.passwordHash);
+  
+  console.log('Password verification result:', valid);
+  
   if (!valid) return c.json({ status: false, error: 'Invalid credentials' }, 401);
   
   const token = await signJwt({ id: user.id, role: user.role, email: user.email }, c.env.JWT_SECRET);

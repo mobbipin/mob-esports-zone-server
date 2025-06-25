@@ -44,38 +44,36 @@ export const TeamMembership = sqliteTable('TeamMembership', {
 export const Tournament = sqliteTable('Tournament', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  type: text('type').notNull(),
-  date: text('date').notNull(),
-  status: text('status').notNull(),
-  createdBy: text('createdBy').notNull(),
+  description: text('description'),
+  game: text('game').notNull(),
+  startDate: text('startDate').notNull(),
+  endDate: text('endDate').notNull(),
+  maxTeams: integer('maxTeams').notNull(),
+  prizePool: real('prizePool'),
+  entryFee: real('entryFee'),
   rules: text('rules'),
-  bannerUrl: text('bannerUrl'),
-  maxTeams: integer('maxTeams'),
-  registrationDeadline: text('registrationDeadline'),
-  prizePool: text('prizePool'),
-  isOnline: integer('isOnline'),
-  mapPool: text('mapPool'), // JSON array string
-  contactDiscord: text('contactDiscord'),
+  status: text('status').notNull().default('upcoming'),
+  createdBy: text('createdBy').notNull(),
+  createdAt: text('createdAt').notNull(),
 });
 
-export const Registration = sqliteTable('Registration', {
-  teamId: text('teamId').notNull(),
+export const TournamentRegistration = sqliteTable('TournamentRegistration', {
   tournamentId: text('tournamentId').notNull(),
+  teamId: text('teamId').notNull(),
+  registeredAt: text('registeredAt').notNull(),
 });
 
 export const Match = sqliteTable('Match', {
   id: text('id').primaryKey(),
   tournamentId: text('tournamentId').notNull(),
-  teamAId: text('teamAId').notNull(),
-  teamBId: text('teamBId').notNull(),
-  scoreA: integer('scoreA'),
-  scoreB: integer('scoreB'),
+  team1Id: text('team1Id'),
+  team2Id: text('team2Id'),
+  round: integer('round').notNull(),
+  matchNumber: integer('matchNumber').notNull(),
   winnerId: text('winnerId'),
-  round: text('round'),
-  map: text('map'),
-  format: text('format'),
-  matchTime: text('matchTime'),
-  maxPoints: integer('maxPoints'),
+  score1: integer('score1'),
+  score2: integer('score2'),
+  status: text('status').default('pending'),
 });
 
 export const Post = sqliteTable('Post', {
@@ -85,4 +83,14 @@ export const Post = sqliteTable('Post', {
   imageUrl: text('imageUrl'),
   createdBy: text('createdBy').notNull(),
   createdAt: text('createdAt').notNull(),
+});
+
+export const FileUpload = sqliteTable('FileUpload', {
+  id: text('id').primaryKey(),
+  fileName: text('fileName').notNull(),
+  fileType: text('fileType').notNull(),
+  fileSize: integer('fileSize').notNull(),
+  fileUrl: text('fileUrl').notNull(),
+  uploadedBy: text('uploadedBy').notNull(),
+  uploadDate: text('uploadDate').notNull(),
 }); 
