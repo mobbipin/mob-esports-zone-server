@@ -4,7 +4,7 @@ import { z } from 'zod';
 const PostSchema = z.object({
   title: z.string().min(2),
   content: z.string().min(2),
-  imageUrl: z.string().url().optional()
+  imageUrl: z.string().url().or(z.literal('')).optional().transform(val => val === '' ? undefined : val)
 });
 
 export const createPost = async (c: any) => {

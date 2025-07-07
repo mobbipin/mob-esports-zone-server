@@ -58,11 +58,71 @@ export const getTournament = async (c: any) => {
   const { results } = await c.env.DB.prepare('SELECT * FROM Tournament WHERE id = ?').bind(id).all();
   if (!results.length) return c.json({ status: false, error: 'Tournament not found' }, 404);
   const tournament = results[0];
-  // Get registered teams
-  const { results: teams } = await c.env.DB.prepare('SELECT * FROM TournamentRegistration WHERE tournamentId = ?').bind(id).all();
+  
+  // Get registered teams with full team details
+  const { results: registrations } = await c.env.DB.prepare(`
+    SELECT tr.*, t.name as teamName, t.logoUrl as teamLogo, t.tag as teamTag
+    FROM TournamentRegistration tr
+    LEFT JOIN Team t ON tr.teamId = t.id
+    WHERE tr.tournamentId = ?
+  `).bind(id).all();
+  
   // Get matches
   const { results: matches } = await c.env.DB.prepare('SELECT * FROM Match WHERE tournamentId = ? ORDER BY round, matchNumber').bind(id).all();
-  return c.json({ status: true, data: { ...tournament, teams, matches } });
+  
+  // Transform data to match frontend expectations
+  const transformedTournament = {
+    ...tournament,
+    // Map backend fields to frontend expectations
+    participants: registrations.length,
+    maxParticipants: tournament.maxTeams,
+    prize: tournament.prizePool ? `$${tournament.prizePool.toLocaleString()}` : "TBA",
+    date: new Date(tournament.startDate).toLocaleDateString(),
+    startTime: new Date(tournament.startDate).toLocaleTimeString(),
+    region: "Global", // Default value
+    platform: "Mobile", // Default value
+    longDescription: tournament.description || tournament.description,
+    // Transform rules from string to array
+    rules: tournament.rules ? tournament.rules.split('\n').filter((rule: string) => rule.trim()) : [
+      "All participants must follow fair play guidelines",
+      "No cheating or use of unauthorized software",
+      "Decisions made by tournament officials are final",
+      "Participants must be available for scheduled matches"
+    ],
+    // Create schedule from start and end dates
+    schedule: [
+      {
+        date: new Date(tournament.startDate).toLocaleDateString(),
+        time: new Date(tournament.startDate).toLocaleTimeString(),
+        event: "Tournament Start"
+      },
+      {
+        date: new Date(tournament.endDate).toLocaleDateString(),
+        time: new Date(tournament.endDate).toLocaleTimeString(),
+        event: "Tournament End"
+      }
+    ],
+    // Create prize distribution
+    prizes: tournament.prizePool ? [
+      { position: "1st Place", amount: `$${Math.floor(tournament.prizePool * 0.5).toLocaleString()}` },
+      { position: "2nd Place", amount: `$${Math.floor(tournament.prizePool * 0.3).toLocaleString()}` },
+      { position: "3rd Place", amount: `$${Math.floor(tournament.prizePool * 0.2).toLocaleString()}` }
+    ] : [
+      { position: "1st Place", amount: "TBA" },
+      { position: "2nd Place", amount: "TBA" },
+      { position: "3rd Place", amount: "TBA" }
+    ],
+    // Transform registered teams
+    registeredTeams: registrations.map((reg: any) => ({
+      id: reg.teamId,
+      name: reg.teamName || "Unknown Team",
+      avatar: reg.teamLogo || "https://via.placeholder.com/32x32?text=T"
+    })),
+    teams: registrations,
+    matches
+  };
+  
+  return c.json({ status: true, data: transformedTournament });
 };
 
 export const updateTournament = async (c: any) => {
@@ -96,10 +156,47 @@ export const deleteTournament = async (c: any) => {
 export const registerTeam = async (c: any) => {
   const { id } = c.req.param();
   const { teamId } = await c.req.json();
+  const user = c.get('user');
+  
+  // Check if tournament exists
+  const { results: tournament } = await c.env.DB.prepare('SELECT * FROM Tournament WHERE id = ?').bind(id).all();
+  if (!tournament.length) {
+    return c.json({ status: false, error: 'Tournament not found' }, 404);
+  }
+  
+  // Check if team exists and user is a member
+  const { results: teamMembership } = await c.env.DB.prepare(
+    'SELECT * FROM TeamMembership WHERE teamId = ? AND userId = ?'
+  ).bind(teamId, user.id).all();
+  
+  if (!teamMembership.length) {
+    return c.json({ status: false, error: 'You are not a member of this team' }, 403);
+  }
+  
+  // Check if team is already registered
+  const { results: existingRegistration } = await c.env.DB.prepare(
+    'SELECT * FROM TournamentRegistration WHERE tournamentId = ? AND teamId = ?'
+  ).bind(id, teamId).all();
+  
+  if (existingRegistration.length > 0) {
+    return c.json({ status: false, error: 'Team is already registered for this tournament' }, 400);
+  }
+  
+  // Check if tournament is full
+  const { results: registrations } = await c.env.DB.prepare(
+    'SELECT COUNT(*) as count FROM TournamentRegistration WHERE tournamentId = ?'
+  ).bind(id).all();
+  
+  if (registrations[0].count >= tournament[0].maxTeams) {
+    return c.json({ status: false, error: 'Tournament is full' }, 400);
+  }
+  
+  // Register the team
   await c.env.DB.prepare(
     'INSERT INTO TournamentRegistration (tournamentId, teamId, registeredAt) VALUES (?, ?, ?)'
   ).bind(id, teamId, new Date().toISOString()).run();
-  return c.json({ status: true, message: 'Team registered' });
+  
+  return c.json({ status: true, message: 'Team registered successfully' });
 };
 
 export const createBracket = async (c: any) => {

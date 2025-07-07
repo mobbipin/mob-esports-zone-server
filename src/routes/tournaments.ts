@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import * as tournamentController from '../controllers/tournamentController';
 import { jwtAuth } from '../middleware/auth';
 import { roleGuard } from '../middleware/roleGuard';
-import { createTournamentSchema, registerTeamSchema, matchResultSchema } from '../validators/tournament';
+import { createTournamentSchema, updateTournamentSchema, registerTeamSchema, matchResultSchema } from '../validators/tournament';
 
 const tournaments = new Hono();
 
@@ -18,7 +18,7 @@ const tournaments = new Hono();
 
 tournaments.post('/', jwtAuth, roleGuard('admin'), zValidator('json', createTournamentSchema), tournamentController.createTournament);
 tournaments.get('/:id', tournamentController.getTournament);
-tournaments.put('/:id', jwtAuth, roleGuard('admin'), zValidator('json', createTournamentSchema), tournamentController.updateTournament);
+tournaments.put('/:id', jwtAuth, roleGuard('admin'), zValidator('json', updateTournamentSchema), tournamentController.updateTournament);
 tournaments.delete('/:id', jwtAuth, roleGuard('admin'), tournamentController.deleteTournament);
 tournaments.get('/', tournamentController.listTournaments);
 tournaments.post('/:id/register', jwtAuth, zValidator('json', registerTeamSchema), tournamentController.registerTeam);

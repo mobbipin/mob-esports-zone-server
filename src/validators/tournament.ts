@@ -27,4 +27,6 @@ export const matchResultSchema = z.object({
   format: z.string().optional(),
   matchTime: z.string().optional(),
   maxPoints: z.number().optional()
-}); 
+});
+
+export const updateTournamentSchema = createTournamentSchema.partial(); 

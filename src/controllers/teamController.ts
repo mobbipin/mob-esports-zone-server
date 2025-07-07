@@ -22,9 +22,10 @@ export const createTeam = async (c: any) => {
   const { name, tag, bio, logoUrl, region } = parse.data;
   const user = c.get('user');
   const id = nanoid();
+  const createdAt = new Date().toISOString();
   await c.env.DB.prepare(
-    'INSERT INTO Team (id, name, tag, bio, logoUrl, region, ownerId) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).bind(id, name, tag ?? null, bio ?? null, logoUrl ?? null, region ?? null, user.id).run();
+    'INSERT INTO Team (id, name, tag, bio, logoUrl, region, ownerId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(id, name, tag ?? null, bio ?? null, logoUrl ?? null, region ?? null, user.id, createdAt).run();
   await c.env.DB.prepare(
     'INSERT INTO TeamMembership (userId, teamId, role) VALUES (?, ?, ?)'
   ).bind(user.id, id, 'owner').run();
@@ -207,4 +208,21 @@ export const transferOwner = async (c: any) => {
   await c.env.DB.prepare('UPDATE TeamMembership SET role = ? WHERE teamId = ? AND userId = ?').bind('member', teamId, user.id).run();
   await c.env.DB.prepare('UPDATE TeamMembership SET role = ? WHERE teamId = ? AND userId = ?').bind('owner', teamId, newOwnerId).run();
   return c.json({ status: true, message: 'Ownership transferred.' });
+}; 
+
+export const listTeams = async (c: any) => {
+  const { page = '1', limit = '10', search } = c.req.query();
+  const pageNum = parseInt(page as string, 10) || 1;
+  const limitNum = parseInt(limit as string, 10) || 10;
+  const offset = (pageNum - 1) * limitNum;
+  let sql = 'SELECT id, name, tag, logoUrl, region, ownerId, matchesPlayed, wins FROM Team';
+  let params: any[] = [];
+  if (search) {
+    sql += ' WHERE name LIKE ? OR tag LIKE ?';
+    params.push(`%${search}%`, `%${search}%`);
+  }
+  sql += ' ORDER BY name COLLATE NOCASE ASC LIMIT ? OFFSET ?';
+  params.push(limitNum, offset);
+  const { results } = await c.env.DB.prepare(sql).bind(...params).all();
+  return c.json({ status: true, data: results });
 }; 

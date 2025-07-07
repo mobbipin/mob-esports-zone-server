@@ -16,6 +16,7 @@ const teams = new Hono();
 
 teams.post('/', jwtAuth, zValidator('json', createTeamSchema), teamController.createTeam);
 teams.get('/my', jwtAuth, teamController.getMyTeam); // get my team
+teams.get('/', teamController.listTeams);
 teams.get('/:id', teamController.getTeamById); // get team by id
 teams.put('/:id', jwtAuth, zValidator('json', createTeamSchema), teamController.updateTeam);
 teams.delete('/:id', jwtAuth, teamController.deleteTeam);

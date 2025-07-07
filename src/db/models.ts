@@ -33,6 +33,7 @@ export const Team = sqliteTable('Team', {
   ownerId: text('ownerId').notNull(),
   matchesPlayed: integer('matchesPlayed').default(0),
   wins: integer('wins').default(0),
+  createdAt: text('createdAt') ,
 });
 
 export const TeamMembership = sqliteTable('TeamMembership', {

@@ -1,0 +1,1 @@
+ALTER TABLE `Team` ADD `createdAt` text NOT NULL;
