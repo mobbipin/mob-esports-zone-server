@@ -28,9 +28,11 @@ export const createTournament = async (c: any) => {
   if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
   const { name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules } = parse.data;
   const id = nanoid();
+  const user = c.get('user');
+  const createdAt = new Date().toISOString();
   await c.env.DB.prepare(
-    'INSERT INTO Tournament (id, name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(id, name, description ?? null, game, startDate, endDate, maxTeams, prizePool ?? null, entryFee ?? null, rules ?? null, 'upcoming').run();
+    'INSERT INTO Tournament (id, name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, status, createdBy, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(id, name, description ?? null, game, startDate, endDate, maxTeams, prizePool ?? null, entryFee ?? null, rules ?? null, 'upcoming', user.id, createdAt).run();
   return c.json({ status: true, data: { id }, message: 'Tournament created' });
 };
 

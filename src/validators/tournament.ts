@@ -7,7 +7,7 @@ export const createTournamentSchema = z.object({
   maxTeams: z.number().optional(),
   rules: z.string().optional(),
   bannerUrl: z.string().url().optional(),
-  prizePool: z.string().optional(),
+  prizePool: z.number().optional(),
   isOnline: z.boolean().optional(),
   mapPool: z.array(z.string()).optional(),
   registrationDeadline: z.string().optional(),

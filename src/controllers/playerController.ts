@@ -52,18 +52,43 @@ export const listPlayers = async (c: any) => {
   const pageNum = parseInt(page as string, 10) || 1;
   const limitNum = parseInt(limit as string, 10) || 10;
   const offset = (pageNum - 1) * limitNum;
-  let sql = 'SELECT * FROM PlayerProfile';
+  let sql = `
+    SELECT 
+      User.id, User.email, User.role, User.username, User.displayName,
+      (SELECT Team.name FROM TeamMembership JOIN Team ON TeamMembership.teamId = Team.id WHERE TeamMembership.userId = User.id LIMIT 1) as teamName,
+      PlayerProfile.userId as profileUserId, PlayerProfile.bio, PlayerProfile.region, PlayerProfile.gameId, PlayerProfile.avatar, PlayerProfile.rank, PlayerProfile.winRate, PlayerProfile.kills, PlayerProfile.social, PlayerProfile.achievements
+    FROM User
+    LEFT JOIN PlayerProfile ON User.id = PlayerProfile.userId
+    WHERE User.role = 'player'
+  `;
   let params: any[] = [];
   if (search) {
-    sql += ' WHERE bio LIKE ? OR gameId LIKE ?';
-    params.push(`%${search}%`, `%${search}%`);
+    sql += ' AND (User.username LIKE ? OR User.displayName LIKE ? OR PlayerProfile.bio LIKE ? OR PlayerProfile.gameId LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
   }
   sql += ' LIMIT ? OFFSET ?';
   params.push(limitNum, offset);
   const { results } = await c.env.DB.prepare(sql).bind(...params).all();
-  for (const p of results) {
-    if (p.social) p.social = JSON.parse(p.social);
-    if (p.achievements) p.achievements = JSON.parse(p.achievements);
-  }
-  return c.json({ status: true, data: results });
+  const data = results.map((row: any) => {
+    let playerProfile = {
+      bio: row.bio,
+      region: row.region,
+      gameId: row.gameId,
+      avatar: row.avatar,
+      rank: row.rank,
+      winRate: row.winRate,
+      kills: row.kills,
+      social: row.social ? JSON.parse(row.social) : null,
+      achievements: row.achievements ? JSON.parse(row.achievements) : null,
+    };
+    return {
+      id: row.id,
+      email: row.email,
+      username: row.username,
+      displayName: row.displayName,
+      teamName: row.teamName,
+      playerProfile,
+    };
+  });
+  return c.json({ status: true, data });
 }; 
