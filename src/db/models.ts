@@ -41,6 +41,15 @@ export const TeamMembership = sqliteTable('TeamMembership', {
   role: text('role').notNull(),
 });
 
+export const TeamInvite = sqliteTable('TeamInvite', {
+  id: text('id').primaryKey(),
+  teamId: text('teamId').notNull(),
+  invitedUserId: text('invitedUserId').notNull(),
+  invitedBy: text('invitedBy').notNull(),
+  status: text('status').notNull().default('pending'), // pending, accepted, rejected
+  createdAt: text('createdAt').notNull(),
+});
+
 export const Tournament = sqliteTable('Tournament', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),

@@ -102,4 +102,14 @@ CREATE TABLE IF NOT EXISTS FileUpload (
   fileUrl TEXT NOT NULL,
   uploadedBy TEXT NOT NULL REFERENCES User(id),
   uploadDate TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS TeamInvite (
+  id TEXT PRIMARY KEY,
+  teamId TEXT NOT NULL REFERENCES Team(id),
+  invitedBy TEXT NOT NULL REFERENCES User(id),
+  invitedEmail TEXT NOT NULL,
+  invitedUserId TEXT,
+  status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'accepted', 'rejected'
+  createdAt TEXT NOT NULL
 ); 

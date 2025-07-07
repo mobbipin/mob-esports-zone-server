@@ -92,6 +92,7 @@ export const me = async (c: any) => {
   
   const dbUser = results[0];
   let playerProfile = null;
+  let teamId = null;
   
   if (dbUser.role === 'player') {
     const { results: profiles } = await c.env.DB.prepare('SELECT * FROM PlayerProfile WHERE userId = ?').bind(dbUser.id).all();
@@ -99,6 +100,12 @@ export const me = async (c: any) => {
       playerProfile = profiles[0];
       if (playerProfile.social) playerProfile.social = JSON.parse(playerProfile.social);
       if (playerProfile.achievements) playerProfile.achievements = JSON.parse(playerProfile.achievements);
+    }
+    
+    // Get user's team
+    const { results: teamMemberships } = await c.env.DB.prepare('SELECT teamId FROM TeamMembership WHERE userId = ?').bind(dbUser.id).all();
+    if (teamMemberships.length) {
+      teamId = teamMemberships[0].teamId;
     }
   }
   
@@ -110,6 +117,7 @@ export const me = async (c: any) => {
       role: dbUser.role,
       username: dbUser.username,
       displayName: dbUser.displayName,
+      teamId,
       playerProfile
     }
   });

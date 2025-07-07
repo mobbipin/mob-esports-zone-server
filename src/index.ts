@@ -6,17 +6,12 @@ import teams from './routes/teams'
 import tournaments from './routes/tournaments'
 import posts from './routes/posts'
 import admin from './routes/admin'
+import upload from './routes/upload'
+import users from './routes/users'
 
 const app = new Hono()
 
-app.use('*', cors({
-  origin: [
-    'https://esportszone.mobbysc.com',
-    'http://localhost:5173'
-  ],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-}))
+app.use('*', cors());
 
 app.get('/', (c) => c.text('Hello Hono ! I am MOB ESPORTS SERVER'))
 
@@ -26,5 +21,7 @@ app.route('/teams', teams)
 app.route('/tournaments', tournaments)
 app.route('/posts', posts)
 app.route('/admin', admin)
+app.route('/upload', upload)
+app.route('/users', users)
 
 export default app
