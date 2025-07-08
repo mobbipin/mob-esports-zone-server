@@ -10,9 +10,8 @@ function getUserId(c: any) {
 
 // Helper to get R2 public URL
 function getR2Url(key: string) {
-  // For local development, return a placeholder URL
-  // In production, this should be your actual R2 public URL
-  return `https://via.placeholder.com/400x200?text=${encodeURIComponent(key)}`;
+  // Use the custom domain for R2 public access
+  return `https://image.esportszone.mobbysc.com/${key}`;
 }
 
 export async function uploadFile(c: any) {

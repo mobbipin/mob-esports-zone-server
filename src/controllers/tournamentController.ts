@@ -11,7 +11,8 @@ const TournamentSchema = z.object({
   prizePool: z.number().optional(),
   entryFee: z.number().optional(),
   rules: z.string().optional(),
-  status: z.enum(['upcoming', 'registration', 'ongoing', 'completed']).optional()
+  status: z.enum(['upcoming', 'registration', 'ongoing', 'completed']).optional(),
+  imageUrl: z.string().optional()
 });
 
 const MatchSchema = z.object({
@@ -26,13 +27,13 @@ export const createTournament = async (c: any) => {
   const data = await c.req.json();
   const parse = TournamentSchema.safeParse(data);
   if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
-  const { name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules } = parse.data;
+  const { name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, imageUrl } = parse.data;
   const id = nanoid();
   const user = c.get('user');
   const createdAt = new Date().toISOString();
   await c.env.DB.prepare(
-    'INSERT INTO Tournament (id, name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, status, createdBy, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(id, name, description ?? null, game, startDate, endDate, maxTeams, prizePool ?? null, entryFee ?? null, rules ?? null, 'upcoming', user.id, createdAt).run();
+    'INSERT INTO Tournament (id, name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, status, createdBy, createdAt, imageUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(id, name, description ?? null, game, startDate, endDate, maxTeams, prizePool ?? null, entryFee ?? null, rules ?? null, 'upcoming', user.id, createdAt, imageUrl ?? null).run();
   return c.json({ status: true, data: { id }, message: 'Tournament created' });
 };
 
@@ -74,6 +75,7 @@ export const getTournament = async (c: any) => {
   const transformedTournament = {
     ...tournament,
     // Map backend fields to frontend expectations
+    imageUrl: tournament.imageUrl || null, // Ensure imageUrl is included
     participants: registrations.length,
     maxParticipants: tournament.maxTeams,
     prize: tournament.prizePool ? `$${tournament.prizePool.toLocaleString()}` : "TBA",

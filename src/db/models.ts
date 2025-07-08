@@ -65,6 +65,7 @@ export const Tournament = sqliteTable('Tournament', {
   status: text('status').notNull().default('upcoming'),
   createdBy: text('createdBy').notNull(),
   createdAt: text('createdAt').notNull(),
+  imageUrl: text('imageUrl'), // Added field for tournament image
 });
 
 export const TournamentRegistration = sqliteTable('TournamentRegistration', {

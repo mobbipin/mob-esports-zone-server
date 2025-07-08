@@ -11,7 +11,8 @@ export const createTournamentSchema = z.object({
   isOnline: z.boolean().optional(),
   mapPool: z.array(z.string()).optional(),
   registrationDeadline: z.string().optional(),
-  contactDiscord: z.string().url().optional()
+  contactDiscord: z.string().url().optional(),
+  imageUrl: z.string().url().optional() // Added imageUrl for tournament image
 });
 
 export const registerTeamSchema = z.object({
