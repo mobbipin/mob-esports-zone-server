@@ -36,10 +36,18 @@ friends.put('/:id/reject', jwtAuth, async (c: any) => {
   return c.json({ status: true, message: 'Friend request rejected' });
 });
 
-// List friends and all friend requests (sent and received)
+// List friends and all friend requests (sent and received), include user info
 friends.get('/', jwtAuth, async (c: any) => {
   const userId = c.get('user').id;
-  const { results } = await c.env.DB.prepare('SELECT * FROM Friend WHERE (userId = ? OR friendId = ?)').bind(userId, userId).all();
+  const { results } = await c.env.DB.prepare(`
+    SELECT Friend.*, 
+      U1.displayName as userDisplayName, U1.username as userUsername, U1.avatar as userAvatar,
+      U2.displayName as friendDisplayName, U2.username as friendUsername, U2.avatar as friendAvatar, U2.banned as friendBanned
+    FROM Friend
+    LEFT JOIN User U1 ON Friend.userId = U1.id
+    LEFT JOIN User U2 ON Friend.friendId = U2.id
+    WHERE Friend.userId = ? OR Friend.friendId = ?
+  `).bind(userId, userId).all();
   return c.json({ status: true, data: results });
 });
 
