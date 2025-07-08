@@ -30,6 +30,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+.cursor/
 # misc
 .DS_Store
 
