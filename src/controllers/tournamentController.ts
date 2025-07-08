@@ -12,7 +12,8 @@ const TournamentSchema = z.object({
   entryFee: z.number().optional(),
   rules: z.string().optional(),
   status: z.enum(['upcoming', 'registration', 'ongoing', 'completed']).optional(),
-  imageUrl: z.string().optional()
+  imageUrl: z.string().optional(),
+  bannerUrl: z.string().optional()
 });
 
 const MatchSchema = z.object({
@@ -27,13 +28,14 @@ export const createTournament = async (c: any) => {
   const data = await c.req.json();
   const parse = TournamentSchema.safeParse(data);
   if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
-  const { name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, imageUrl } = parse.data;
+  const { name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, imageUrl, bannerUrl } = parse.data;
+  const finalImageUrl = imageUrl || bannerUrl || null;
   const id = nanoid();
   const user = c.get('user');
   const createdAt = new Date().toISOString();
   await c.env.DB.prepare(
     'INSERT INTO Tournament (id, name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, status, createdBy, createdAt, imageUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(id, name, description ?? null, game, startDate, endDate, maxTeams, prizePool ?? null, entryFee ?? null, rules ?? null, 'upcoming', user.id, createdAt, imageUrl ?? null).run();
+  ).bind(id, name, description ?? null, game, startDate, endDate, maxTeams, prizePool ?? null, entryFee ?? null, rules ?? null, 'upcoming', user.id, createdAt, finalImageUrl).run();
   return c.json({ status: true, data: { id }, message: 'Tournament created' });
 };
 
@@ -134,6 +136,14 @@ export const updateTournament = async (c: any) => {
   if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
   const fields = [];
   const values = [];
+  let finalImageUrl = undefined;
+  if ('imageUrl' in parse.data || 'bannerUrl' in parse.data) {
+    finalImageUrl = parse.data.imageUrl || parse.data.bannerUrl || null;
+    fields.push('imageUrl = ?');
+    values.push(finalImageUrl);
+    delete parse.data.imageUrl;
+    delete parse.data.bannerUrl;
+  }
   for (const key in parse.data) {
     if ((parse.data as any)[key] !== undefined) {
       fields.push(`${key} = ?`);
