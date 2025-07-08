@@ -7,6 +7,7 @@ export const User = sqliteTable('User', {
   role: text('role').notNull(),
   username: text('username'),
   displayName: text('displayName'),
+  avatar: text('avatar'),
   createdAt: text('createdAt').notNull(),
   banned: integer('banned').default(0),
   isPublic: integer('isPublic').default(1),

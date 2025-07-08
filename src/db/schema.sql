@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS User (
   role TEXT NOT NULL CHECK(role IN ('player', 'admin')),
   username TEXT,
   displayName TEXT,
+  avatar TEXT,
   createdAt TEXT NOT NULL
 );
 
