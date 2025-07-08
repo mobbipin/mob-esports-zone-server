@@ -9,6 +9,7 @@ export const User = sqliteTable('User', {
   displayName: text('displayName'),
   createdAt: text('createdAt').notNull(),
   banned: integer('banned').default(0),
+  isPublic: integer('isPublic').default(1),
 });
 
 export const PlayerProfile = sqliteTable('PlayerProfile', {
@@ -105,4 +106,33 @@ export const FileUpload = sqliteTable('FileUpload', {
   fileUrl: text('fileUrl').notNull(),
   uploadedBy: text('uploadedBy').notNull(),
   uploadDate: text('uploadDate').notNull(),
+});
+
+export const Message = sqliteTable('Message', {
+  id: text('id').primaryKey(),
+  senderId: text('senderId').notNull(),
+  recipientId: text('recipientId'),
+  teamId: text('teamId'),
+  content: text('content').notNull(),
+  createdAt: text('createdAt').notNull(),
+  isRead: integer('isRead').default(0),
+  isBulk: integer('isBulk').default(0),
+});
+
+export const Notification = sqliteTable('Notification', {
+  id: text('id').primaryKey(),
+  userId: text('userId').notNull(),
+  type: text('type').notNull(),
+  content: text('content').notNull(),
+  link: text('link'),
+  isRead: integer('isRead').default(0),
+  createdAt: text('createdAt').notNull(),
+});
+
+export const Friend = sqliteTable('Friend', {
+  id: text('id').primaryKey(),
+  userId: text('userId').notNull(),
+  friendId: text('friendId').notNull(),
+  status: text('status').notNull().default('pending'),
+  createdAt: text('createdAt').notNull(),
 }); 
