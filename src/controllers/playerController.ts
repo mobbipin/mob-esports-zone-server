@@ -11,7 +11,8 @@ const UpdatePlayerSchema = z.object({
     twitch: z.string().url().optional(),
     discord: z.string().optional()
   }).optional(),
-  achievements: z.array(z.string()).optional()
+  achievements: z.array(z.string()).optional(),
+  avatar: z.string().url().optional() // Allow updating avatar
 });
 
 export const getPlayer = async (c: any) => {
