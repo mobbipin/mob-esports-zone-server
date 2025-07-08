@@ -4,10 +4,17 @@ import { jwtAuth } from '../middleware/auth';
 
 const friends = new Hono();
 
-// Send friend request
+// Send friend request (prevent duplicates)
 friends.post('/request', jwtAuth, async (c: any) => {
   const { friendId } = await c.req.json();
   const userId = c.get('user').id;
+  if (userId === friendId) return c.json({ status: false, error: 'Cannot add yourself as a friend' }, 400);
+  // Check for existing request (pending or accepted)
+  const { results } = await c.env.DB.prepare('SELECT * FROM Friend WHERE ((userId = ? AND friendId = ?) OR (userId = ? AND friendId = ?)) AND status IN ("pending", "accepted")')
+    .bind(userId, friendId, friendId, userId).all();
+  if (results.length) {
+    return c.json({ status: false, error: 'Friend request already exists or you are already friends' }, 400);
+  }
   const id = nanoid();
   const createdAt = new Date().toISOString();
   await c.env.DB.prepare('INSERT INTO Friend (id, userId, friendId, status, createdAt) VALUES (?, ?, ?, ?, ?)')

@@ -87,6 +87,7 @@ export const listPlayers = async (c: any) => {
       email: row.email,
       username: row.username,
       displayName: row.displayName,
+      avatar: row.avatar || row.playerProfile?.avatar || null,
       teamName: row.teamName,
       banned: row.banned,
       isPublic: row.isPublic,
