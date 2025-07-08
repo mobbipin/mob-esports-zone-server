@@ -10,8 +10,8 @@ const players = new Hono();
 // PUT /players/:id
 // GET /players
 
-players.get('/:id', jwtAuth, playerController.getPlayer);
+players.get('/:id', playerController.getPlayer);
 players.put('/:id', jwtAuth, zValidator('json', updatePlayerSchema), playerController.updatePlayer);
-players.get('/', jwtAuth, playerController.listPlayers);
+players.get('/', playerController.listPlayers);
 
 export default players; 

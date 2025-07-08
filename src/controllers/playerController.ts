@@ -17,12 +17,12 @@ const UpdatePlayerSchema = z.object({
 
 export const getPlayer = async (c: any) => {
   const { id } = c.req.param();
-  const { results } = await c.env.DB.prepare('SELECT * FROM PlayerProfile WHERE userId = ?').bind(id).all();
+  const { results } = await c.env.DB.prepare('SELECT User.*, PlayerProfile.* FROM User LEFT JOIN PlayerProfile ON User.id = PlayerProfile.userId WHERE User.id = ?').bind(id).all();
   if (!results.length) return c.json({ status: false, error: 'Player not found' }, 404);
   const player = results[0];
   if (player.social) player.social = JSON.parse(player.social);
   if (player.achievements) player.achievements = JSON.parse(player.achievements);
-  return c.json({ status: true, data: player });
+  return c.json({ status: true, data: { ...player, banned: player.banned } });
 };
 
 export const updatePlayer = async (c: any) => {
@@ -55,7 +55,7 @@ export const listPlayers = async (c: any) => {
   const offset = (pageNum - 1) * limitNum;
   let sql = `
     SELECT 
-      User.id, User.email, User.role, User.username, User.displayName,
+      User.id, User.email, User.role, User.username, User.displayName, User.banned,
       (SELECT Team.name FROM TeamMembership JOIN Team ON TeamMembership.teamId = Team.id WHERE TeamMembership.userId = User.id LIMIT 1) as teamName,
       PlayerProfile.userId as profileUserId, PlayerProfile.bio, PlayerProfile.region, PlayerProfile.gameId, PlayerProfile.avatar, PlayerProfile.rank, PlayerProfile.winRate, PlayerProfile.kills, PlayerProfile.social, PlayerProfile.achievements
     FROM User
@@ -88,6 +88,7 @@ export const listPlayers = async (c: any) => {
       username: row.username,
       displayName: row.displayName,
       teamName: row.teamName,
+      banned: row.banned,
       playerProfile,
     };
   });

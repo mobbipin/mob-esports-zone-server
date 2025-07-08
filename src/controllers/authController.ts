@@ -73,12 +73,16 @@ export const login = async (c: any) => {
   
   if (!valid) return c.json({ status: false, error: 'Invalid credentials' }, 401);
   
+  if (user.banned === 1) {
+    return c.json({ status: false, banned: true, error: 'You are banned. If this was a mistake, mail admin@esportszone.mobbysc.com' }, 403);
+  }
+  
   const token = await signJwt({ id: user.id, role: user.role, email: user.email }, c.env.JWT_SECRET);
   return c.json({
     status: true,
     data: {
       token,
-      user: { id: user.id, role: user.role, email: user.email, username: user.username, displayName: user.displayName }
+      user: { id: user.id, role: user.role, email: user.email, username: user.username, displayName: user.displayName, banned: user.banned }
     }
   });
 };
@@ -118,7 +122,8 @@ export const me = async (c: any) => {
       username: dbUser.username,
       displayName: dbUser.displayName,
       teamId,
-      playerProfile
+      playerProfile,
+      banned: dbUser.banned
     }
   });
 }; 
