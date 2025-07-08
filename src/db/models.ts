@@ -8,6 +8,7 @@ export const User = sqliteTable('User', {
   username: text('username'),
   displayName: text('displayName'),
   createdAt: text('createdAt').notNull(),
+  banned: integer('banned').default(0),
 });
 
 export const PlayerProfile = sqliteTable('PlayerProfile', {

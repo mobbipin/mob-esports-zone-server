@@ -9,8 +9,14 @@ const admin = new Hono();
 admin.get('/users', jwtAuth, roleGuard('admin'), async (c) => {
   // TODO: List users
 });
-admin.put('/users/:id/ban', jwtAuth, roleGuard('admin'), async (c) => {
-  // TODO: Ban user
+admin.put('/users/:id/ban', jwtAuth, roleGuard('admin'), async (c: any) => {
+  const userId = c.req.param('id');
+  const { results } = await c.env.DB.prepare('SELECT * FROM User WHERE id = ?').bind(userId).all();
+  if (!results.length) {
+    return c.json({ success: false, error: 'User not found' }, 404);
+  }
+  await c.env.DB.prepare('UPDATE User SET banned = 1 WHERE id = ?').bind(userId).run();
+  return c.json({ success: true, message: 'User banned' });
 });
 
 // Teams
