@@ -55,7 +55,7 @@ export const listPlayers = async (c: any) => {
   const offset = (pageNum - 1) * limitNum;
   let sql = `
     SELECT 
-      User.id, User.email, User.role, User.username, User.displayName, User.banned,
+      User.id, User.email, User.role, User.username, User.displayName, User.banned, User.isPublic,
       (SELECT Team.name FROM TeamMembership JOIN Team ON TeamMembership.teamId = Team.id WHERE TeamMembership.userId = User.id LIMIT 1) as teamName,
       PlayerProfile.userId as profileUserId, PlayerProfile.bio, PlayerProfile.region, PlayerProfile.gameId, PlayerProfile.avatar, PlayerProfile.rank, PlayerProfile.winRate, PlayerProfile.kills, PlayerProfile.social, PlayerProfile.achievements
     FROM User
@@ -89,6 +89,7 @@ export const listPlayers = async (c: any) => {
       displayName: row.displayName,
       teamName: row.teamName,
       banned: row.banned,
+      isPublic: row.isPublic,
       playerProfile,
     };
   });

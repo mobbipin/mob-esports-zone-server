@@ -29,12 +29,18 @@ friends.put('/:id/reject', jwtAuth, async (c: any) => {
   return c.json({ status: true, message: 'Friend request rejected' });
 });
 
-// List friends
+// List friends and all friend requests (sent and received)
 friends.get('/', jwtAuth, async (c: any) => {
   const userId = c.get('user').id;
-  const { results } = await c.env.DB.prepare('SELECT * FROM Friend WHERE (userId = ? OR friendId = ?) AND status = ?')
-    .bind(userId, userId, 'accepted').all();
+  const { results } = await c.env.DB.prepare('SELECT * FROM Friend WHERE (userId = ? OR friendId = ?)').bind(userId, userId).all();
   return c.json({ status: true, data: results });
+});
+
+// Cancel friend request (delete or set status to rejected)
+friends.delete('/:id/cancel', jwtAuth, async (c: any) => {
+  const { id } = c.req.param();
+  await c.env.DB.prepare('UPDATE Friend SET status = ? WHERE id = ?').bind('rejected', id).run();
+  return c.json({ status: true, message: 'Friend request canceled' });
 });
 
 // Set account public/private
