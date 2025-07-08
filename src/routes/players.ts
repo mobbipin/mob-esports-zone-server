@@ -12,6 +12,7 @@ const players = new Hono();
 
 players.get('/:id', playerController.getPlayer);
 players.put('/:id', jwtAuth, zValidator('json', updatePlayerSchema), playerController.updatePlayer);
+players.get('/:id/tournaments', playerController.getPlayerTournaments);
 players.get('/', playerController.listPlayers);
 
 export default players; 

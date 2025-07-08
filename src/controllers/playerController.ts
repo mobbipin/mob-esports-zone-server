@@ -96,3 +96,30 @@ export const listPlayers = async (c: any) => {
   });
   return c.json({ status: true, data });
 }; 
+
+export const getPlayerTournaments = async (c: any) => {
+  const { id } = c.req.param();
+  // Find all teams the user has been a member of
+  const { results: teams } = await c.env.DB.prepare('SELECT teamId FROM TeamMembership WHERE userId = ?').bind(id).all();
+  if (!teams.length) return c.json({ status: true, data: [] });
+  const teamIds = teams.map((t: any) => t.teamId);
+  // Find all tournaments those teams registered for
+  const placeholders = teamIds.map(() => '?').join(',');
+  const { results: tournaments } = await c.env.DB.prepare(
+    `SELECT tr.tournamentId, t.name, t.startDate, t.endDate, t.prizePool, t.status
+     FROM TournamentRegistration tr
+     LEFT JOIN Tournament t ON tr.tournamentId = t.id
+     WHERE tr.teamId IN (${placeholders})`
+  ).bind(...teamIds).all();
+  // Optionally, add position if available (not implemented here)
+  // Format prize
+  const data = tournaments.map((t: any) => ({
+    id: t.tournamentId,
+    name: t.name,
+    date: t.startDate,
+    endDate: t.endDate,
+    prize: t.prizePool ? `$${t.prizePool.toLocaleString()}` : 'TBA',
+    status: t.status
+  }));
+  return c.json({ status: true, data });
+}; 
