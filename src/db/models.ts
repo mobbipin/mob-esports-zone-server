@@ -11,6 +11,10 @@ export const User = sqliteTable('User', {
   createdAt: text('createdAt').notNull(),
   banned: integer('banned').default(0),
   isPublic: integer('isPublic').default(1),
+  emailVerified: integer('emailVerified').default(0),
+  emailVerificationToken: text('emailVerificationToken'),
+  isDeleted: integer('isDeleted').default(0),
+  deletedAt: text('deletedAt'),
 });
 
 export const PlayerProfile = sqliteTable('PlayerProfile', {
@@ -69,12 +73,18 @@ export const Tournament = sqliteTable('Tournament', {
   createdBy: text('createdBy').notNull(),
   createdAt: text('createdAt').notNull(),
   imageUrl: text('imageUrl'), // Added field for tournament image
+  type: text('type').notNull().default('squad'), // 'solo', 'duo', 'squad'
+  isApproved: integer('isApproved').default(0),
+  approvedBy: text('approvedBy'),
+  approvedAt: text('approvedAt'),
 });
 
 export const TournamentRegistration = sqliteTable('TournamentRegistration', {
   tournamentId: text('tournamentId').notNull(),
-  teamId: text('teamId').notNull(),
+  teamId: text('teamId'),
+  userId: text('userId'), // For solo tournaments
   registeredAt: text('registeredAt').notNull(),
+  registeredPlayers: text('registeredPlayers'), // JSON array of player IDs for squad tournaments
 });
 
 export const Match = sqliteTable('Match', {
@@ -96,6 +106,16 @@ export const Post = sqliteTable('Post', {
   content: text('content').notNull(),
   imageUrl: text('imageUrl'),
   createdBy: text('createdBy').notNull(),
+  createdAt: text('createdAt').notNull(),
+  isApproved: integer('isApproved').default(0),
+  approvedBy: text('approvedBy'),
+  approvedAt: text('approvedAt'),
+  likes: integer('likes').default(0),
+});
+
+export const PostLikes = sqliteTable('PostLikes', {
+  postId: text('postId').notNull(),
+  userId: text('userId').notNull(),
   createdAt: text('createdAt').notNull(),
 });
 
@@ -124,9 +144,28 @@ export const Notification = sqliteTable('Notification', {
   id: text('id').primaryKey(),
   userId: text('userId').notNull(),
   type: text('type').notNull(),
-  content: text('content').notNull(),
-  link: text('link'),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
   isRead: integer('isRead').default(0),
+  createdAt: text('createdAt').notNull(),
+  data: text('data'), // JSON string for additional data
+});
+
+export const FriendRequest = sqliteTable('FriendRequest', {
+  id: text('id').primaryKey(),
+  senderId: text('senderId').notNull(),
+  receiverId: text('receiverId').notNull(),
+  status: text('status').notNull().default('pending'), // 'pending', 'accepted', 'rejected', 'cancelled'
+  createdAt: text('createdAt').notNull(),
+  updatedAt: text('updatedAt').notNull(),
+});
+
+export const PasswordReset = sqliteTable('PasswordReset', {
+  id: text('id').primaryKey(),
+  userId: text('userId').notNull(),
+  token: text('token').notNull().unique(),
+  otp: text('otp').notNull(),
+  expiresAt: text('expiresAt').notNull(),
   createdAt: text('createdAt').notNull(),
 });
 
