@@ -3,6 +3,7 @@ import { hashPassword, verifyPassword } from '../utils/hash';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -46,13 +47,6 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Helper function to send email (placeholder - implement with nodemailer)
-const sendEmail = async (to: string, subject: string, content: string) => {
-  // TODO: Implement with nodemailer
-  console.log(`Email to ${to}: ${subject} - ${content}`);
-  return true;
-};
-
 export const register = async (c: any) => {
   const data = await c.req.json();
   const parse = RegisterSchema.safeParse(data);
@@ -67,12 +61,8 @@ export const register = async (c: any) => {
     }
   }
   
-  if (role === 'tournament_organizer') {
-    const validOrganizerCode = c.env.ORGANIZER_REGISTRATION_CODE || 'MOB_ORGANIZER_2024';
-    if (organizerCode !== validOrganizerCode) {
-      return c.json({ status: false, error: 'Invalid organizer registration code' }, 400);
-    }
-  }
+  // Tournament organizers can register freely but need admin approval
+  // No registration code required for tournament organizers
   
   const userId = nanoid();
   const passwordHash = await hashPassword(password);
@@ -81,17 +71,25 @@ export const register = async (c: any) => {
   const { results: exists } = await c.env.DB.prepare('SELECT * FROM User WHERE email = ?').bind(email).all();
   if (exists.length) return c.json({ status: false, error: 'Email already registered' }, 400);
   
+  // Set approval status based on role
+  const isApproved = role === 'admin' ? 1 : 0; // Admins are auto-approved, others need approval
+  
   await c.env.DB.prepare(
-    'INSERT INTO User (id, email, passwordHash, role, username, displayName, createdAt, emailVerificationToken) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(userId, email, passwordHash, role, username ?? null, displayName ?? null, new Date().toISOString(), emailVerificationToken).run();
+    'INSERT INTO User (id, email, passwordHash, role, username, displayName, createdAt, emailVerificationToken, isApproved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(userId, email, passwordHash, role, username ?? null, displayName ?? null, new Date().toISOString(), emailVerificationToken, isApproved).run();
   
   if (role === 'player') {
     await c.env.DB.prepare('INSERT INTO PlayerProfile (userId) VALUES (?)').bind(userId).run();
   }
   
   // Send verification email
-  const verificationUrl = `${c.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}`;
-  await sendEmail(email, 'Verify Your Email', `Please click this link to verify your email: ${verificationUrl}`);
+  const verificationUrl = `${c.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${emailVerificationToken}`;
+  const emailSent = await sendVerificationEmail(email, verificationUrl);
+  
+  if (!emailSent) {
+    console.error('Failed to send verification email to:', email);
+    return c.json({ status: false, error: 'Registration successful but failed to send verification email. Please contact support.' }, 500);
+  }
   
   return c.json({ status: true, message: 'Registered successfully. Please check your email to verify your account.' });
 };
@@ -125,10 +123,11 @@ export const login = async (c: any) => {
     return c.json({ status: false, banned: true, error: 'You are banned. If this was a mistake, mail admin@esportszone.mobbysc.com' }, 403);
   }
   
-  // Check email verification for players and tournament organizers
-  if ((user.role === 'player' || user.role === 'tournament_organizer') && !user.emailVerified) {
-    return c.json({ status: false, error: 'Please verify your email before logging in' }, 403);
-  }
+  // Email verification is no longer required for login
+  // Users can browse the app but need verification for team/tournament actions
+  
+  // Tournament organizers can login but will be restricted in activities
+  // No need to block login here - let them login and handle restrictions in specific endpoints
   
   const token = await signJwt({ id: user.id, role: user.role, email: user.email }, c.env.JWT_SECRET);
   return c.json({
@@ -142,7 +141,8 @@ export const login = async (c: any) => {
         username: user.username, 
         displayName: user.displayName, 
         banned: user.banned,
-        emailVerified: user.emailVerified
+        emailVerified: user.emailVerified,
+        isApproved: user.isApproved
       }
     }
   });
@@ -182,7 +182,31 @@ export const resendVerification = async (c: any) => {
   await c.env.DB.prepare('UPDATE User SET emailVerificationToken = ? WHERE id = ?').bind(emailVerificationToken, user.id).run();
   
   const verificationUrl = `${c.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}`;
-  await sendEmail(email, 'Verify Your Email', `Please click this link to verify your email: ${verificationUrl}`);
+  const emailSent = await sendVerificationEmail(email, verificationUrl);
+  
+  if (!emailSent) {
+    console.error('Failed to send verification email to:', email);
+    return c.json({ status: false, error: 'Failed to send verification email. Please try again later.' }, 500);
+  }
+  
+  return c.json({ status: true, message: 'Verification email sent' });
+};
+
+export const resendVerificationForUser = async (c: any) => {
+  const user = c.get('user');
+  
+  if (user.emailVerified) return c.json({ status: false, error: 'Email already verified' }, 400);
+  
+  const emailVerificationToken = nanoid(32);
+  await c.env.DB.prepare('UPDATE User SET emailVerificationToken = ? WHERE id = ?').bind(emailVerificationToken, user.id).run();
+  
+  const verificationUrl = `${c.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${emailVerificationToken}`;
+  const emailSent = await sendVerificationEmail(user.email, verificationUrl);
+  
+  if (!emailSent) {
+    console.error('Failed to send verification email to:', user.email);
+    return c.json({ status: false, error: 'Failed to send verification email. Please try again later.' }, 500);
+  }
   
   return c.json({ status: true, message: 'Verification email sent' });
 };
@@ -206,7 +230,7 @@ export const forgotPassword = async (c: any) => {
     nanoid(), user.id, token, otp, expiresAt, new Date().toISOString()
   ).run();
   
-  await sendEmail(email, 'Password Reset', `Your OTP is: ${otp}. This will expire in 15 minutes.`);
+  await sendPasswordResetEmail(email, otp);
   
   return c.json({ status: true, message: 'Password reset email sent', data: { token } });
 };
@@ -295,7 +319,51 @@ export const me = async (c: any) => {
       teamId,
       playerProfile,
       banned: dbUser.banned,
-      emailVerified: dbUser.emailVerified
+      emailVerified: dbUser.emailVerified,
+      isApproved: dbUser.isApproved
     }
   });
+};
+
+export const approveOrganizer = async (c: any) => {
+  const admin = c.get('user');
+  if (admin.role !== 'admin') {
+    return c.json({ status: false, error: 'Unauthorized' }, 403);
+  }
+  
+  const { organizerId } = await c.req.json();
+  if (!organizerId) {
+    return c.json({ status: false, error: 'Organizer ID is required' }, 400);
+  }
+  
+  // Check if user exists and is a tournament organizer
+  const { results } = await c.env.DB.prepare('SELECT * FROM User WHERE id = ? AND role = ?').bind(organizerId, 'tournament_organizer').all();
+  if (!results.length) {
+    return c.json({ status: false, error: 'Tournament organizer not found' }, 404);
+  }
+  
+  const organizer = results[0];
+  if (organizer.isApproved) {
+    return c.json({ status: false, error: 'Organizer is already approved' }, 400);
+  }
+  
+  // Approve the organizer
+  await c.env.DB.prepare('UPDATE User SET isApproved = 1, approvedBy = ?, approvedAt = ? WHERE id = ?').bind(
+    admin.id, new Date().toISOString(), organizerId
+  ).run();
+  
+  return c.json({ status: true, message: 'Tournament organizer approved successfully' });
+};
+
+export const getPendingOrganizers = async (c: any) => {
+  const admin = c.get('user');
+  if (admin.role !== 'admin') {
+    return c.json({ status: false, error: 'Unauthorized' }, 403);
+  }
+  
+  const { results } = await c.env.DB.prepare(
+    'SELECT id, email, username, displayName, createdAt FROM User WHERE role = ? AND isApproved = 0 AND isDeleted = 0 ORDER BY createdAt DESC'
+  ).bind('tournament_organizer').all();
+  
+  return c.json({ status: true, data: results });
 }; 

@@ -21,10 +21,15 @@ auth.get('/me', jwtAuth, authController.me);
 
 auth.post('/verify-email', zValidator('json', verifyEmailSchema), authController.verifyEmail);
 auth.post('/resend-verification', zValidator('json', resendVerificationSchema), authController.resendVerification);
+auth.post('/resend-verification-user', jwtAuth, authController.resendVerificationForUser);
 
 auth.post('/forgot-password', zValidator('json', forgotPasswordSchema), authController.forgotPassword);
 auth.post('/reset-password', zValidator('json', resetPasswordSchema), authController.resetPassword);
 
 auth.delete('/delete-account', jwtAuth, authController.deleteAccount);
+
+// Admin routes for tournament organizer approval
+auth.get('/pending-organizers', jwtAuth, authController.getPendingOrganizers);
+auth.post('/approve-organizer', jwtAuth, authController.approveOrganizer);
 
 export default auth; 

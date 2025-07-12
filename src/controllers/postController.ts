@@ -30,6 +30,16 @@ export const createPost = async (c: any) => {
     return c.json({ status: false, error: 'Unauthorized to create posts' }, 403);
   }
   
+  // Tournament organizers need email verification and admin approval
+  if (user.role === 'tournament_organizer') {
+    if (!user.emailVerified) {
+      return c.json({ status: false, error: 'Please verify your email before creating posts' }, 403);
+    }
+    if (!user.isApproved) {
+      return c.json({ status: false, error: 'Your account is pending admin approval. You cannot create posts yet.' }, 403);
+    }
+  }
+  
   // Posts from tournament organizers need admin approval
   const isApproved = user.role === 'admin';
   const approvedBy = user.role === 'admin' ? user.id : null;

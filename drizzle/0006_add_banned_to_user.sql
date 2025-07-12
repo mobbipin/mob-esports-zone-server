@@ -1,1 +1,0 @@
-ALTER TABLE `User` ADD `banned` integer DEFAULT 0; 

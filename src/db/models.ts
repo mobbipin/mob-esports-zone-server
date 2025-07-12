@@ -15,6 +15,9 @@ export const User = sqliteTable('User', {
   emailVerificationToken: text('emailVerificationToken'),
   isDeleted: integer('isDeleted').default(0),
   deletedAt: text('deletedAt'),
+  isApproved: integer('isApproved').default(0), // For tournament organizers
+  approvedBy: text('approvedBy'), // Admin who approved the organizer
+  approvedAt: text('approvedAt'), // When the organizer was approved
 });
 
 export const PlayerProfile = sqliteTable('PlayerProfile', {

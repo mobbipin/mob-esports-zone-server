@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.7.0",
+    "@types/nodemailer": "^6.4.17",
     "bcryptjs": "^3.0.2",
     "bun-jwt": "^1.0.1",
     "dotenv": "^16.5.0",
@@ -18,6 +19,7 @@
     "hono": "^4.8.2",
     "jose": "^6.0.11",
     "nanoid": "^5.1.5",
+    "nodemailer": "^7.0.5",
     "socket.io": "^4.8.1",
     "wrangler": "^4.21.2",
     "zod": "^3.25.67"

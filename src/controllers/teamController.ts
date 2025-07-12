@@ -21,6 +21,12 @@ export const createTeam = async (c: any) => {
   if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
   const { name, tag, bio, logoUrl, region } = parse.data;
   const user = c.get('user');
+  
+  // Check if user's email is verified
+  if (!user.emailVerified) {
+    return c.json({ status: false, error: 'Please verify your email before creating a team' }, 403);
+  }
+  
   const id = nanoid();
   const createdAt = new Date().toISOString();
   await c.env.DB.prepare(
@@ -169,6 +175,12 @@ export const getUserInvites = async (c: any) => {
 export const acceptInvite = async (c: any) => {
   const { inviteId } = c.req.param();
   const user = c.get('user');
+  
+  // Check if user's email is verified
+  if (!user.emailVerified) {
+    return c.json({ status: false, error: 'Please verify your email before joining a team' }, 403);
+  }
+  
   // Get invite
   const { results } = await c.env.DB.prepare('SELECT * FROM TeamInvite WHERE id = ?').bind(inviteId).all();
   if (!results.length) return c.json({ status: false, error: 'Invite not found' }, 404);
