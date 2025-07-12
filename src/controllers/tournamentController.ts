@@ -70,13 +70,19 @@ export const createTournament = async (c: any) => {
 };
 
 export const listTournaments = async (c: any) => {
-  const { status, playerId } = c.req.query();
+  const { status, playerId, organizerId } = c.req.query();
   let sql = 'SELECT * FROM Tournament WHERE 1=1';
   const params: any[] = [];
   
   if (status) {
     sql += ' AND status = ?';
     params.push(status);
+  }
+  
+  // Filter by organizer
+  if (organizerId) {
+    sql += ' AND createdBy = ?';
+    params.push(organizerId);
   }
   
   // Only show approved tournaments to players
@@ -220,6 +226,37 @@ export const updateTournament = async (c: any) => {
   const data = await c.req.json();
   const parse = TournamentSchema.partial().safeParse(data);
   if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
+  
+  const user = c.get('user');
+  
+  // Check if tournament exists
+  const { results: tournament } = await c.env.DB.prepare('SELECT * FROM Tournament WHERE id = ?').bind(id).all();
+  if (!tournament.length) {
+    return c.json({ status: false, error: 'Tournament not found' }, 404);
+  }
+  
+  const tournamentData = tournament[0];
+  
+  // Only admins can update approved tournaments directly
+  if (tournamentData.isApproved && user.role !== 'admin') {
+    return c.json({ status: false, error: 'Only admins can update approved tournaments. Please use the pending system for updates.' }, 403);
+  }
+  
+  // Tournament organizers can only update their own tournaments that are not yet approved
+  if (user.role === 'tournament_organizer') {
+    if (tournamentData.createdBy !== user.id) {
+      return c.json({ status: false, error: 'You can only update your own tournaments' }, 403);
+    }
+    if (tournamentData.isApproved) {
+      return c.json({ status: false, error: 'Approved tournaments must be updated through the pending system' }, 403);
+    }
+  }
+  
+  // Regular users cannot update tournaments
+  if (user.role === 'player') {
+    return c.json({ status: false, error: 'Players cannot update tournaments' }, 403);
+  }
+  
   const fields = [];
   const values = [];
   let finalImageUrl = undefined;
@@ -245,6 +282,36 @@ export const updateTournament = async (c: any) => {
 
 export const deleteTournament = async (c: any) => {
   const { id } = c.req.param();
+  const user = c.get('user');
+  
+  // Check if tournament exists
+  const { results: tournament } = await c.env.DB.prepare('SELECT * FROM Tournament WHERE id = ?').bind(id).all();
+  if (!tournament.length) {
+    return c.json({ status: false, error: 'Tournament not found' }, 404);
+  }
+  
+  const tournamentData = tournament[0];
+  
+  // Only admins can delete approved tournaments directly
+  if (tournamentData.isApproved && user.role !== 'admin') {
+    return c.json({ status: false, error: 'Only admins can delete approved tournaments. Please use the pending system for deletions.' }, 403);
+  }
+  
+  // Tournament organizers can only delete their own tournaments that are not yet approved
+  if (user.role === 'tournament_organizer') {
+    if (tournamentData.createdBy !== user.id) {
+      return c.json({ status: false, error: 'You can only delete your own tournaments' }, 403);
+    }
+    if (tournamentData.isApproved) {
+      return c.json({ status: false, error: 'Approved tournaments must be deleted through the pending system' }, 403);
+    }
+  }
+  
+  // Regular users cannot delete tournaments
+  if (user.role === 'player') {
+    return c.json({ status: false, error: 'Players cannot delete tournaments' }, 403);
+  }
+  
   await c.env.DB.prepare('DELETE FROM Tournament WHERE id = ?').bind(id).run();
   await c.env.DB.prepare('DELETE FROM TournamentRegistration WHERE tournamentId = ?').bind(id).run();
   await c.env.DB.prepare('DELETE FROM Match WHERE tournamentId = ?').bind(id).run();

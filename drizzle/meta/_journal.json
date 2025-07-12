@@ -71,6 +71,20 @@
       "when": 1752339175392,
       "tag": "0010_elite_queen_noir",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1752346508080,
+      "tag": "0011_young_gorilla_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1752349220002,
+      "tag": "0012_fine_supernaut",
+      "breakpoints": true
     }
   ]
 }

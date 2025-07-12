@@ -3,16 +3,7 @@ import nodemailer from 'nodemailer';
 // Create transporter for email sending (works with both Bun and Wrangler)
 const createTransporter = () => {
   // Debug: Print environment variables
-  console.log('=== SMTP Environment Variables Debug ===');
-  console.log('SMTP_HOST:', process.env.SMTP_HOST);
-  console.log('SMTP_PORT:', process.env.SMTP_PORT);
-  console.log('SMTP_SECURE:', process.env.SMTP_SECURE);
-  console.log('SMTP_USER:', process.env.SMTP_USER);
-  console.log('SMTP_PASS:', process.env.SMTP_PASS ? '[HIDDEN]' : 'undefined');
-  console.log('FROM_EMAIL:', process.env.FROM_EMAIL);
-  console.log('Environment:', process.env.NODE_ENV || 'development');
-  console.log('========================================');
-  
+
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     throw new Error('SMTP credentials are not set in environment variables. Please set SMTP_HOST, SMTP_USER, and SMTP_PASS in wrangler.jsonc for Wrangler or .env for Bun.');
   }

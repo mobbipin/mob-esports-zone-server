@@ -129,7 +129,13 @@ export const login = async (c: any) => {
   // Tournament organizers can login but will be restricted in activities
   // No need to block login here - let them login and handle restrictions in specific endpoints
   
-  const token = await signJwt({ id: user.id, role: user.role, email: user.email }, c.env.JWT_SECRET);
+  const token = await signJwt({ 
+    id: user.id, 
+    role: user.role, 
+    email: user.email,
+    emailVerified: Boolean(user.emailVerified),
+    isApproved: Boolean(user.isApproved)
+  }, c.env.JWT_SECRET);
   return c.json({
     status: true,
     data: {
@@ -325,6 +331,136 @@ export const me = async (c: any) => {
   });
 };
 
+const PlayerUpdateSchema = z.object({
+  username: z.string().min(2),
+  email: z.string().email(),
+  avatar: z.string().url().optional(),
+  bio: z.string().max(500).optional(),
+  gameUsername: z.string().min(2).max(64).optional(),
+  region: z.string().optional(),
+  rank: z.string().optional(),
+});
+
+const OrganizerAdminUpdateSchema = z.object({
+  username: z.string().min(2),
+  email: z.string().email(),
+  avatar: z.string().url().optional(),
+});
+
+export const updateUser = async (c: any) => {
+  const data = await c.req.json();
+  const user = c.get('user');
+
+  try {
+    let parse;
+    if (user.role === 'player') {
+      parse = PlayerUpdateSchema.safeParse(data);
+    } else {
+      parse = OrganizerAdminUpdateSchema.safeParse(data);
+    }
+    if (!parse.success) {
+      return c.json({ status: false, error: parse.error.flatten() }, 400);
+    }
+    // Only destructure fields that exist for the role
+    const { username, email, avatar } = parse.data;
+    // For player, also get bio, gameUsername, region, rank
+    const bio = user.role === 'player' ? (parse.data as any).bio : undefined;
+    const gameUsername = user.role === 'player' ? (parse.data as any).gameUsername : undefined;
+    const region = user.role === 'player' ? (parse.data as any).region : undefined;
+    const rank = user.role === 'player' ? (parse.data as any).rank : undefined;
+
+    // Check if email is being changed
+    if (email && email !== user.email) {
+      // Check if new email already exists
+      const { results: existingUser } = await c.env.DB.prepare(
+        'SELECT id FROM User WHERE email = ? AND id != ?'
+      ).bind(email, user.id).all();
+      if (existingUser.length > 0) {
+        return c.json({ status: false, error: 'Email already exists' }, 400);
+      }
+      // For email change, require email verification
+      // For tournament organizers, also reset approval status
+      if (user.role === 'tournament_organizer') {
+        await c.env.DB.prepare(
+          'UPDATE User SET email = ?, emailVerified = 0, isApproved = 0 WHERE id = ?'
+        ).bind(email, user.id).run();
+      } else {
+        await c.env.DB.prepare(
+          'UPDATE User SET email = ?, emailVerified = 0 WHERE id = ?'
+        ).bind(email, user.id).run();
+      }
+      // Generate verification URL
+      const verificationToken = nanoid();
+      const verificationUrl = `${c.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+      // Store verification token
+      await c.env.DB.prepare(
+        'UPDATE User SET emailVerificationToken = ? WHERE id = ?'
+      ).bind(verificationToken, user.id).run();
+      // Send email verification
+      await sendVerificationEmail(email, verificationUrl);
+      // Send notification about approval status reset for organizers
+      if (user.role === 'tournament_organizer') {
+        await c.env.DB.prepare(
+          'INSERT INTO Notification (id, userId, type, title, message, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
+        ).bind(
+          nanoid(), user.id, 'email_change_approval_reset',
+          'Email Changed - Re-approval Required',
+          'Your email has been changed. Your tournament organizer approval status has been reset. Please verify your new email and reapply for approval.',
+          new Date().toISOString()
+        ).run();
+      }
+      return c.json({
+        status: true,
+        message: user.role === 'tournament_organizer'
+          ? 'Email updated. Please check your email for verification. Your approval status has been reset and you will need to reapply.'
+          : 'Email updated. Please check your email for verification.'
+      });
+    }
+
+    // If email is not changed, do not touch emailVerified
+    // Build update query based on user role
+    let updateFields = [];
+    let updateValues = [];
+    updateFields.push('username = ?');
+    updateValues.push(username);
+    if (avatar) {
+      updateFields.push('avatar = ?');
+      updateValues.push(avatar);
+    }
+    // Only update email if it is not changed (to allow username/avatar update)
+    if (email === user.email) {
+      updateFields.push('email = ?');
+      updateValues.push(email);
+    }
+    if (user.role === 'player') {
+      if (bio) {
+        updateFields.push('bio = ?');
+        updateValues.push(bio);
+      }
+      if (gameUsername) {
+        updateFields.push('gameUsername = ?');
+        updateValues.push(gameUsername);
+      }
+      if (region) {
+        updateFields.push('region = ?');
+        updateValues.push(region);
+      }
+      if (rank) {
+        updateFields.push('rank = ?');
+        updateValues.push(rank);
+      }
+    }
+    updateValues.push(user.id);
+    await c.env.DB.prepare(
+      `UPDATE User SET ${updateFields.join(', ')} WHERE id = ?`
+    ).bind(...updateValues).run();
+    return c.json({ status: true, message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return c.json({ status: false, error: 'Failed to update profile' }, 500);
+  }
+};
+
 export const approveOrganizer = async (c: any) => {
   const admin = c.get('user');
   if (admin.role !== 'admin') {
@@ -353,6 +489,49 @@ export const approveOrganizer = async (c: any) => {
   ).run();
   
   return c.json({ status: true, message: 'Tournament organizer approved successfully' });
+};
+
+export const unapproveOrganizer = async (c: any) => {
+  const data = await c.req.json();
+  const admin = c.get('user');
+  
+  if (admin.role !== 'admin') {
+    return c.json({ status: false, error: 'Unauthorized' }, 403);
+  }
+  
+  try {
+    const { organizerId } = data;
+    
+    // Get organizer details first
+    const { results: organizer } = await c.env.DB.prepare(
+      'SELECT * FROM User WHERE id = ? AND role = ?'
+    ).bind(organizerId, 'tournament_organizer').all();
+    
+    if (!organizer.length) {
+      return c.json({ status: false, error: 'Tournament organizer not found' }, 404);
+    }
+    
+    // Unapprove the organizer
+    await c.env.DB.prepare(
+      'UPDATE User SET isApproved = 0 WHERE id = ?'
+    ).bind(organizerId).run();
+    
+    // Send notification to organizer
+    await c.env.DB.prepare(
+      'INSERT INTO Notification (id, userId, type, title, message, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(
+      nanoid(), organizerId, 'organizer_unapproved', 
+      'Organizer License Cancelled', 
+      'Your tournament organizer license has been cancelled. Please reapply if you wish to continue organizing tournaments.', 
+      new Date().toISOString()
+    ).run();
+    
+    return c.json({ status: true, message: 'Organizer unapproved successfully' });
+    
+  } catch (error) {
+    console.error('Error unapproving organizer:', error);
+    return c.json({ status: false, error: 'Failed to unapprove organizer' }, 500);
+  }
 };
 
 export const getPendingOrganizers = async (c: any) => {

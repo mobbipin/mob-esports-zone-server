@@ -53,7 +53,7 @@ export const createPost = async (c: any) => {
 };
 
 export const listPosts = async (c: any) => {
-  const { limit, admin, page = '1', approved } = c.req.query();
+  const { limit, admin, page = '1', approved, organizerId } = c.req.query();
   const pageNum = parseInt(page as string, 10) || 1;
   const limitNum = limit ? parseInt(limit as string, 10) : 10;
   const offset = (pageNum - 1) * limitNum;
@@ -63,6 +63,12 @@ export const listPosts = async (c: any) => {
   
   // Join with User table to get author info
   sql += ' FROM Post p LEFT JOIN User u ON p.createdBy = u.id WHERE 1=1';
+  
+  // Filter by organizer
+  if (organizerId) {
+    sql += ' AND p.createdBy = ?';
+    params.push(organizerId);
+  }
   
   // Filter by approval status
   if (approved === 'true') {
@@ -85,7 +91,7 @@ export const listPosts = async (c: any) => {
   
   const { results } = await c.env.DB.prepare(sql).bind(...params).all();
   
-  if (admin) return c.json({ status: true, data: results });
+  if (admin || organizerId) return c.json({ status: true, data: results });
   
   // Only return id, title, imageUrl as thumbnail, createdAt for /posts?limit=3
   const posts = results.map((p: any) => ({ 
@@ -141,6 +147,37 @@ export const updatePost = async (c: any) => {
   const data = await c.req.json();
   const parse = PostSchema.partial().safeParse(data);
   if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
+  
+  const user = c.get('user');
+  
+  // Check if post exists
+  const { results: post } = await c.env.DB.prepare('SELECT * FROM Post WHERE id = ?').bind(id).all();
+  if (!post.length) {
+    return c.json({ status: false, error: 'Post not found' }, 404);
+  }
+  
+  const postData = post[0];
+  
+  // Only admins can update approved posts directly
+  if (postData.isApproved && user.role !== 'admin') {
+    return c.json({ status: false, error: 'Only admins can update approved posts. Please use the pending system for updates.' }, 403);
+  }
+  
+  // Tournament organizers can only update their own posts that are not yet approved
+  if (user.role === 'tournament_organizer') {
+    if (postData.createdBy !== user.id) {
+      return c.json({ status: false, error: 'You can only update your own posts' }, 403);
+    }
+    if (postData.isApproved) {
+      return c.json({ status: false, error: 'Approved posts must be updated through the pending system' }, 403);
+    }
+  }
+  
+  // Regular users cannot update posts
+  if (user.role === 'player') {
+    return c.json({ status: false, error: 'Players cannot update posts' }, 403);
+  }
+  
   const fields = [];
   const values = [];
   for (const key in parse.data) {
@@ -158,6 +195,36 @@ export const updatePost = async (c: any) => {
 
 export const deletePost = async (c: any) => {
   const { id } = c.req.param();
+  const user = c.get('user');
+  
+  // Check if post exists
+  const { results: post } = await c.env.DB.prepare('SELECT * FROM Post WHERE id = ?').bind(id).all();
+  if (!post.length) {
+    return c.json({ status: false, error: 'Post not found' }, 404);
+  }
+  
+  const postData = post[0];
+  
+  // Only admins can delete approved posts directly
+  if (postData.isApproved && user.role !== 'admin') {
+    return c.json({ status: false, error: 'Only admins can delete approved posts. Please use the pending system for deletions.' }, 403);
+  }
+  
+  // Tournament organizers can only delete their own posts that are not yet approved
+  if (user.role === 'tournament_organizer') {
+    if (postData.createdBy !== user.id) {
+      return c.json({ status: false, error: 'You can only delete your own posts' }, 403);
+    }
+    if (postData.isApproved) {
+      return c.json({ status: false, error: 'Approved posts must be deleted through the pending system' }, 403);
+    }
+  }
+  
+  // Regular users cannot delete posts
+  if (user.role === 'player') {
+    return c.json({ status: false, error: 'Players cannot delete posts' }, 403);
+  }
+  
   await c.env.DB.prepare('DELETE FROM Post WHERE id = ?').bind(id).run();
   await c.env.DB.prepare('DELETE FROM PostLikes WHERE postId = ?').bind(id).run();
   return c.json({ status: true, message: 'Post deleted' });

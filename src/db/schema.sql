@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS User (
   createdAt TEXT NOT NULL,
   emailVerified BOOLEAN DEFAULT FALSE,
   emailVerificationToken TEXT,
+  isApproved BOOLEAN DEFAULT FALSE,
+  approvedBy TEXT REFERENCES User(id),
+  approvedAt TEXT,
   isDeleted BOOLEAN DEFAULT FALSE,
   deletedAt TEXT
 );
@@ -167,4 +170,43 @@ CREATE TABLE IF NOT EXISTS TeamInvite (
   invitedUserId TEXT,
   status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'accepted', 'rejected'
   createdAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS PendingTournament (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  game TEXT NOT NULL,
+  startDate TEXT NOT NULL,
+  endDate TEXT NOT NULL,
+  maxTeams INTEGER NOT NULL,
+  prizePool REAL,
+  entryFee REAL,
+  rules TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  createdBy TEXT NOT NULL REFERENCES User(id),
+  createdAt TEXT NOT NULL,
+  imageUrl TEXT,
+  type TEXT NOT NULL DEFAULT 'squad',
+  reviewedBy TEXT REFERENCES User(id),
+  reviewedAt TEXT,
+  reviewStatus TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+  reviewNotes TEXT,
+  originalId TEXT, -- For update/delete operations on approved content
+  action TEXT NOT NULL DEFAULT 'create' -- 'create', 'update', 'delete'
+);
+
+CREATE TABLE IF NOT EXISTS PendingPost (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  imageUrl TEXT,
+  createdBy TEXT NOT NULL REFERENCES User(id),
+  createdAt TEXT NOT NULL,
+  reviewedBy TEXT REFERENCES User(id),
+  reviewedAt TEXT,
+  reviewStatus TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+  reviewNotes TEXT,
+  originalId TEXT, -- For update/delete operations on approved content
+  action TEXT NOT NULL DEFAULT 'create' -- 'create', 'update', 'delete'
 ); 

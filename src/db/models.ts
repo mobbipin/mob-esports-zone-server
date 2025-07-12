@@ -116,6 +116,45 @@ export const Post = sqliteTable('Post', {
   likes: integer('likes').default(0),
 });
 
+export const PendingTournament = sqliteTable('PendingTournament', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  game: text('game').notNull(),
+  startDate: text('startDate').notNull(),
+  endDate: text('endDate').notNull(),
+  maxTeams: integer('maxTeams').notNull(),
+  prizePool: real('prizePool'),
+  entryFee: real('entryFee'),
+  rules: text('rules'),
+  status: text('status').notNull().default('pending'),
+  createdBy: text('createdBy').notNull(),
+  createdAt: text('createdAt').notNull(),
+  imageUrl: text('imageUrl'),
+  type: text('type').notNull().default('squad'),
+  reviewedBy: text('reviewedBy'),
+  reviewedAt: text('reviewedAt'),
+  reviewStatus: text('reviewStatus').notNull().default('pending'), // 'pending', 'approved', 'rejected'
+  reviewNotes: text('reviewNotes'),
+  originalId: text('originalId'), // For update/delete operations on approved content
+  action: text('action').notNull().default('create'), // 'create', 'update', 'delete'
+});
+
+export const PendingPost = sqliteTable('PendingPost', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  imageUrl: text('imageUrl'),
+  createdBy: text('createdBy').notNull(),
+  createdAt: text('createdAt').notNull(),
+  reviewedBy: text('reviewedBy'),
+  reviewedAt: text('reviewedAt'),
+  reviewStatus: text('reviewStatus').notNull().default('pending'), // 'pending', 'approved', 'rejected'
+  reviewNotes: text('reviewNotes'),
+  originalId: text('originalId'), // For update/delete operations on approved content
+  action: text('action').notNull().default('create'), // 'create', 'update', 'delete'
+});
+
 export const PostLikes = sqliteTable('PostLikes', {
   postId: text('postId').notNull(),
   userId: text('userId').notNull(),

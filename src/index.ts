@@ -11,6 +11,7 @@ import upload from './routes/upload'
 import users from './routes/users'
 import notifications from './routes/notifications';
 import friends from './routes/friends';
+import pending from './routes/pending';
 import test from './routes/test';
 
 const app = new Hono()
@@ -38,7 +39,8 @@ app.get('/', (c) => {
       upload: '/upload',
       users: '/users',
       notifications: '/notifications',
-      friends: '/friends'
+      friends: '/friends',
+      pending: '/pending'
     }
   })
 })
@@ -53,6 +55,7 @@ app.route('/upload', upload)
 app.route('/users', users)
 app.route('/notifications', notifications)
 app.route('/friends', friends)
+app.route('/pending', pending)
 app.route('/test', test)
 
 export default app

@@ -15,7 +15,7 @@
       "SMTP_USER": "khatribipin029@gmail.com",
       "SMTP_PASS": "wehm stta klfj ukzj",
       "FROM_EMAIL": "khatribipin029@gmail.com",
-      "FRONTEND_URL": "http://localhost:5173 || https://esportszone.mobbysc.com || https://esportszone.mobbysc.com"
+      "FRONTEND_URL": "http://localhost:5173"
     },
   
     // D1 Database
