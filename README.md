@@ -1,6 +1,6 @@
 # MOB Esports Zone - Backend Server
 
-A high-performance backend API for the MOB Esports Zone platform. Built with Node.js, Hono framework, Drizzle ORM, and Cloudflare D1 database.
+A high-performance backend API for the MOB Esports Zone platform. Built with Bun/No, Hono framework, Drizzle ORM, and Cloudflare D1 database.
 
 ## 🚀 Features
 
