@@ -15,6 +15,9 @@ export const User = sqliteTable('User', {
   emailVerificationToken: text('emailVerificationToken'),
   isDeleted: integer('isDeleted').default(0),
   deletedAt: text('deletedAt'),
+  restoreToken: text('restoreToken'), // For account restoration OTP
+  restoreOTP: text('restoreOTP'), // For account restoration OTP
+  restoreOTPExpires: text('restoreOTPExpires'), // OTP expiration time
   isApproved: integer('isApproved').default(0), // For tournament organizers
   approvedBy: text('approvedBy'), // Admin who approved the organizer
   approvedAt: text('approvedAt'), // When the organizer was approved

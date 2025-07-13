@@ -29,7 +29,7 @@ teams.get('/invites/user', jwtAuth, teamController.getUserInvites);
 teams.post('/invite/:inviteId/accept', jwtAuth, teamController.acceptInvite);
 teams.post('/invite/:inviteId/reject', jwtAuth, teamController.rejectInvite);
 teams.post('/:id/accept', jwtAuth, teamController.acceptInvite);
-teams.delete('/:id/leave', jwtAuth, teamController.deleteTeam); // leave team
+teams.delete('/:teamId/leave', jwtAuth, teamController.leaveTeam); // leave team
 teams.post('/:id/transfer-owner', jwtAuth, teamController.transferOwner);
 
 export default teams; 

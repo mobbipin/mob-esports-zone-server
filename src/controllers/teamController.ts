@@ -76,8 +76,13 @@ export const getTeamById = async (c: any) => {
   if (!results.length) return c.json({ status: false, error: 'Team not found' }, 404);
   const team = results[0];
   
-  // Get members
-  const { results: members } = await c.env.DB.prepare('SELECT * FROM TeamMembership WHERE teamId = ?').bind(team.id).all();
+  // Get members with displayName and email
+  const { results: members } = await c.env.DB.prepare(
+    `SELECT TeamMembership.*, User.displayName, User.email
+     FROM TeamMembership
+     JOIN User ON TeamMembership.userId = User.id
+     WHERE TeamMembership.teamId = ?`
+  ).bind(team.id).all();
   return c.json({ status: true, data: { ...team, members } });
 };
 
@@ -96,8 +101,13 @@ export const getTeam = async (c: any) => {
     team = results[0];
   }
   
-  // Get members
-  const { results: members } = await c.env.DB.prepare('SELECT * FROM TeamMembership WHERE teamId = ?').bind(team.id).all();
+  // Get members with displayName and email
+  const { results: members } = await c.env.DB.prepare(
+    `SELECT TeamMembership.*, User.displayName, User.email
+     FROM TeamMembership
+     JOIN User ON TeamMembership.userId = User.id
+     WHERE TeamMembership.teamId = ?`
+  ).bind(team.id).all();
   return c.json({ status: true, data: { ...team, members } });
 };
 
@@ -106,6 +116,14 @@ export const updateTeam = async (c: any) => {
   const data = await c.req.json();
   const parse = TeamSchema.partial().safeParse(data);
   if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
+  
+  const user = c.get('user');
+  
+  // Check if user is the team owner
+  const { results: teamResults } = await c.env.DB.prepare('SELECT ownerId FROM Team WHERE id = ?').bind(id).all();
+  if (!teamResults.length) return c.json({ status: false, error: 'Team not found' }, 404);
+  if (teamResults[0].ownerId !== user.id) return c.json({ status: false, error: 'Only the team owner can edit the team.' }, 403);
+  
   const fields = [];
   const values = [];
   for (const key in parse.data) {
@@ -123,6 +141,13 @@ export const updateTeam = async (c: any) => {
 
 export const deleteTeam = async (c: any) => {
   const { id } = c.req.param();
+  const user = c.get('user');
+  
+  // Check if user is the team owner
+  const { results: teamResults } = await c.env.DB.prepare('SELECT ownerId FROM Team WHERE id = ?').bind(id).all();
+  if (!teamResults.length) return c.json({ status: false, error: 'Team not found' }, 404);
+  if (teamResults[0].ownerId !== user.id) return c.json({ status: false, error: 'Only the team owner can delete the team.' }, 403);
+  
   await c.env.DB.prepare('DELETE FROM Team WHERE id = ?').bind(id).run();
   await c.env.DB.prepare('DELETE FROM TeamMembership WHERE teamId = ?').bind(id).run();
   return c.json({ status: true, message: 'Team deleted' });
@@ -169,9 +194,13 @@ export const getTeamInvites = async (c: any) => {
 export const getUserInvites = async (c: any) => {
   const user = c.get('user');
   const { results } = await c.env.DB.prepare(
-    `SELECT TeamInvite.*, User.email as invitedEmail
+    `SELECT TeamInvite.*, 
+            Team.name as teamName,
+            User.displayName as invitedByName,
+            User.email as invitedByEmail
      FROM TeamInvite
-     LEFT JOIN User ON TeamInvite.invitedUserId = User.id
+     LEFT JOIN Team ON TeamInvite.teamId = Team.id
+     LEFT JOIN User ON TeamInvite.invitedBy = User.id
      WHERE TeamInvite.invitedUserId = ?`
   ).bind(user.id).all();
   return c.json({ status: true, data: results });
@@ -247,4 +276,22 @@ export const listTeams = async (c: any) => {
   params.push(limitNum, offset);
   const { results } = await c.env.DB.prepare(sql).bind(...params).all();
   return c.json({ status: true, data: results });
+};
+
+export const leaveTeam = async (c: any) => {
+  const { teamId } = c.req.param();
+  const user = c.get('user');
+  
+  // Check if user is the team owner
+  const { results: teamResults } = await c.env.DB.prepare('SELECT ownerId FROM Team WHERE id = ?').bind(teamId).all();
+  if (!teamResults.length) return c.json({ status: false, error: 'Team not found' }, 404);
+  
+  if (teamResults[0].ownerId === user.id) {
+    return c.json({ status: false, error: 'Team owner cannot leave the team. Transfer ownership first.' }, 400);
+  }
+  
+  // Remove from team membership
+  await c.env.DB.prepare('DELETE FROM TeamMembership WHERE userId = ? AND teamId = ?').bind(user.id, teamId).run();
+  
+  return c.json({ status: true, message: 'Left team successfully' });
 }; 

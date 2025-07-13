@@ -609,4 +609,115 @@ export const getPendingOrganizers = async (c: any) => {
   ).bind('tournament_organizer').all();
   
   return c.json({ status: true, data: results });
+};
+
+export const getAdminDashboardStats = async (c: any) => {
+  const admin = c.get('user');
+  if (admin.role !== 'admin') {
+    return c.json({ status: false, error: 'Unauthorized' }, 403);
+  }
+  
+  try {
+    // Get recent activities (last 7 days)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    
+    // Pending tournament organizers
+    const { results: pendingOrganizers } = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM User WHERE role = ? AND isApproved = 0 AND isDeleted = 0'
+    ).bind('tournament_organizer').all();
+    
+    // Pending tournaments
+    const { results: pendingTournaments } = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM Tournament WHERE isApproved = 0'
+    ).all();
+    
+    // Pending posts
+    const { results: pendingPosts } = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM Post WHERE isApproved = 0'
+    ).all();
+    
+    // Recent users (last 7 days)
+    const { results: recentUsers } = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM User WHERE createdAt > ? AND isDeleted = 0'
+    ).bind(sevenDaysAgo).all();
+    
+    // Recent tournaments (last 7 days)
+    const { results: recentTournaments } = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM Tournament WHERE createdAt > ?'
+    ).bind(sevenDaysAgo).all();
+    
+    // Recent posts (last 7 days)
+    const { results: recentPosts } = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM Post WHERE createdAt > ?'
+    ).bind(sevenDaysAgo).all();
+    
+    // Total users
+    const { results: totalUsers } = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM User WHERE isDeleted = 0'
+    ).all();
+    
+    // Total teams
+    const { results: totalTeams } = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM Team'
+    ).all();
+    
+    // Total tournaments
+    const { results: totalTournaments } = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM Tournament'
+    ).all();
+    
+    // Recent activities
+    const { results: recentActivities } = await c.env.DB.prepare(`
+      SELECT 
+        'user_registration' as type,
+        u.username as title,
+        u.createdAt as date,
+        'New user registered' as description
+      FROM User u
+      WHERE u.createdAt > ? AND u.isDeleted = 0
+      UNION ALL
+      SELECT 
+        'tournament_created' as type,
+        t.name as title,
+        t.createdAt as date,
+        'New tournament created' as description
+      FROM Tournament t
+      WHERE t.createdAt > ?
+      UNION ALL
+      SELECT 
+        'post_created' as type,
+        p.title as title,
+        p.createdAt as date,
+        'New post created' as description
+      FROM Post p
+      WHERE p.createdAt > ?
+      ORDER BY date DESC
+      LIMIT 10
+    `).bind(sevenDaysAgo, sevenDaysAgo, sevenDaysAgo).all();
+    
+    return c.json({
+      status: true,
+      data: {
+        pending: {
+          organizers: pendingOrganizers[0]?.count || 0,
+          tournaments: pendingTournaments[0]?.count || 0,
+          posts: pendingPosts[0]?.count || 0
+        },
+        recent: {
+          users: recentUsers[0]?.count || 0,
+          tournaments: recentTournaments[0]?.count || 0,
+          posts: recentPosts[0]?.count || 0
+        },
+        totals: {
+          users: totalUsers[0]?.count || 0,
+          teams: totalTeams[0]?.count || 0,
+          tournaments: totalTournaments[0]?.count || 0
+        },
+        activities: recentActivities
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching admin dashboard stats:', error);
+    return c.json({ status: false, error: 'Failed to fetch dashboard stats' }, 500);
+  }
 }; 

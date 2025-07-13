@@ -34,6 +34,7 @@ auth.post('/restore-account', authController.restoreAccount);
 
 // Admin routes for tournament organizer approval
 auth.get('/pending-organizers', jwtAuth, authController.getPendingOrganizers);
+auth.get('/admin/dashboard-stats', jwtAuth, authController.getAdminDashboardStats);
 auth.post('/approve-organizer', jwtAuth, authController.approveOrganizer);
 auth.post('/unapprove-organizer', jwtAuth, authController.unapproveOrganizer);
 
