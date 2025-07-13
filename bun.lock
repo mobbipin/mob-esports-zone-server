@@ -8,6 +8,7 @@
         "@types/nodemailer": "^6.4.17",
         "bcryptjs": "^3.0.2",
         "bun-jwt": "^1.0.1",
+        "classnames": "^2.5.1",
         "dotenv": "^16.5.0",
         "drizzle-orm": "^0.44.2",
         "hono": "^4.8.2",
@@ -179,6 +180,8 @@
     "bun-jwt": ["bun-jwt@1.0.1", "", { "dependencies": { "jose": "^5.5.0" }, "peerDependencies": { "typescript": "^5.0.0" } }, "sha512-i/Y31hF1NBqhUyrvEU/iid7BJ1ktzkqvqZPOM/+e5N0GpwAsq6S7ybRA+8mOAVMugSJcX3RvAy5JlViHwakPQw=="],
 
     "bun-types": ["bun-types@1.2.17", "", { "dependencies": { "@types/node": "*" } }, "sha512-ElC7ItwT3SCQwYZDYoAH+q6KT4Fxjl8DtZ6qDulUFBmXA8YB4xo+l54J9ZJN+k2pphfn9vk7kfubeSd5QfTVJQ=="],
+
+    "classnames": ["classnames@2.5.1", "", {}, "sha512-saHYOzhIQs6wy2sVxTM6bUDsQO4F50V9RQ22qBpEdCW+I+/Wmke2HOl6lS6dTpdxVhb88/I6+Hs+438c3lfUow=="],
 
     "color": ["color@4.2.3", "", { "dependencies": { "color-convert": "^2.0.1", "color-string": "^1.9.0" } }, "sha512-1rXeuUUiGGrykh+CeBdu5Ie7OJwinCgQY0bc7GCRxy5xVHy+moaqkpL/jqQq0MtQOeYcrqEz4abc5f0KtU7W4A=="],
 
