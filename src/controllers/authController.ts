@@ -103,31 +103,32 @@ export const login = async (c: any) => {
   
   console.log('Login attempt for email:', email);
   
-  const { results } = await c.env.DB.prepare('SELECT * FROM User WHERE email = ? AND isDeleted = 0').bind(email).all();
+  // First check if user exists (including deleted ones)
+  const { results: allUsers } = await c.env.DB.prepare('SELECT * FROM User WHERE email = ?').bind(email).all();
   
-  console.log('Database results:', results.length, results.length > 0 ? 'User found' : 'User not found');
+  if (!allUsers.length) {
+    return c.json({ status: false, error: 'Invalid credentials' }, 401);
+  }
   
-  if (!results.length) return c.json({ status: false, error: 'Invalid credentials' }, 401);
-  
-  const user = results[0];
-  
-  console.log('User found:', { id: user.id, email: user.email, role: user.role });
-  
+  const user = allUsers[0];
   const valid = await verifyPassword(password, user.passwordHash);
   
-  console.log('Password verification result:', valid);
+  if (!valid) {
+    return c.json({ status: false, error: 'Invalid credentials' }, 401);
+  }
   
-  if (!valid) return c.json({ status: false, error: 'Invalid credentials' }, 401);
+  // Check if account is deleted
+  if (user.isDeleted === 1) {
+    return c.json({ 
+      status: false, 
+      accountDeleted: true, 
+      error: 'Your account has been deleted. Would you like to restore it?' 
+    }, 403);
+  }
   
   if (user.banned === 1) {
     return c.json({ status: false, banned: true, error: 'You are banned. If this was a mistake, mail admin@esportszone.mobbysc.com' }, 403);
   }
-  
-  // Email verification is no longer required for login
-  // Users can browse the app but need verification for team/tournament actions
-  
-  // Tournament organizers can login but will be restricted in activities
-  // No need to block login here - let them login and handle restrictions in specific endpoints
   
   const token = await signJwt({ 
     id: user.id, 
@@ -136,6 +137,7 @@ export const login = async (c: any) => {
     emailVerified: Boolean(user.emailVerified),
     isApproved: Boolean(user.isApproved)
   }, c.env.JWT_SECRET);
+  
   return c.json({
     status: true,
     data: {
@@ -286,6 +288,68 @@ export const deleteAccount = async (c: any) => {
   ).run();
   
   return c.json({ status: true, message: 'Account deleted successfully' });
+};
+
+const RestoreAccountSchema = z.object({
+  email: z.string().email(),
+  otp: z.string().length(6)
+});
+
+export const sendRestoreOTP = async (c: any) => {
+  const data = await c.req.json();
+  const { email } = data;
+  
+  if (!email) return c.json({ status: false, error: 'Email is required' }, 400);
+  
+  const { results } = await c.env.DB.prepare('SELECT * FROM User WHERE email = ? AND isDeleted = 1').bind(email).all();
+  if (!results.length) return c.json({ status: false, error: 'No deleted account found with this email' }, 404);
+  
+  const user = results[0];
+  const otp = generateOTP();
+  const restoreToken = nanoid(32);
+  
+  // Store restore token and OTP
+  await c.env.DB.prepare('UPDATE User SET restoreToken = ?, restoreOTP = ?, restoreOTPExpires = ? WHERE id = ?').bind(
+    restoreToken, otp, new Date(Date.now() + 15 * 60 * 1000).toISOString(), user.id
+  ).run();
+  
+  // Send OTP email
+  const emailSent = await sendVerificationEmail(email, `Your account restoration OTP is: ${otp}`);
+  
+  if (!emailSent) {
+    return c.json({ status: false, error: 'Failed to send OTP email' }, 500);
+  }
+  
+  return c.json({ 
+    status: true, 
+    message: 'OTP sent to your email',
+    data: { restoreToken }
+  });
+};
+
+export const restoreAccount = async (c: any) => {
+  const data = await c.req.json();
+  const parse = RestoreAccountSchema.safeParse(data);
+  if (!parse.success) return c.json({ status: false, error: parse.error.flatten() }, 400);
+  
+  const { email, otp } = parse.data;
+  
+  const { results } = await c.env.DB.prepare('SELECT * FROM User WHERE email = ? AND isDeleted = 1 AND restoreOTP = ? AND restoreOTPExpires > ?').bind(
+    email, otp, new Date().toISOString()
+  ).all();
+  
+  if (!results.length) {
+    return c.json({ status: false, error: 'Invalid or expired OTP' }, 400);
+  }
+  
+  const user = results[0];
+  
+  // Restore account
+  await c.env.DB.prepare('UPDATE User SET isDeleted = 0, deletedAt = NULL, restoreToken = NULL, restoreOTP = NULL, restoreOTPExpires = NULL WHERE id = ?').bind(
+    user.id
+  ).run();
+  
+  return c.json({ status: true, message: 'Account restored successfully' });
 };
 
 export const me = async (c: any) => {

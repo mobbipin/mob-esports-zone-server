@@ -22,8 +22,13 @@ export const createTeam = async (c: any) => {
   const { name, tag, bio, logoUrl, region } = parse.data;
   const user = c.get('user');
   
-  // Check if user's email is verified
-  if (!user.emailVerified) {
+  // Check if user's email is verified by querying the database directly
+  const { results } = await c.env.DB.prepare('SELECT emailVerified FROM User WHERE id = ?').bind(user.id).all();
+  if (!results.length) {
+    return c.json({ status: false, error: 'User not found' }, 404);
+  }
+  
+  if (!results[0].emailVerified) {
     return c.json({ status: false, error: 'Please verify your email before creating a team' }, 403);
   }
   
@@ -176,8 +181,13 @@ export const acceptInvite = async (c: any) => {
   const { inviteId } = c.req.param();
   const user = c.get('user');
   
-  // Check if user's email is verified
-  if (!user.emailVerified) {
+  // Check if user's email is verified by querying the database directly
+  const { results: userResults } = await c.env.DB.prepare('SELECT emailVerified FROM User WHERE id = ?').bind(user.id).all();
+  if (!userResults.length) {
+    return c.json({ status: false, error: 'User not found' }, 404);
+  }
+  
+  if (!userResults[0].emailVerified) {
     return c.json({ status: false, error: 'Please verify your email before joining a team' }, 403);
   }
   

@@ -28,6 +28,9 @@ auth.post('/reset-password', zValidator('json', resetPasswordSchema), authContro
 auth.put('/update', jwtAuth, authController.updateUser);
 
 auth.delete('/delete-account', jwtAuth, authController.deleteAccount);
+auth.post('/soft-delete-account', jwtAuth, authController.deleteAccount);
+auth.post('/send-restore-otp', authController.sendRestoreOTP);
+auth.post('/restore-account', authController.restoreAccount);
 
 // Admin routes for tournament organizer approval
 auth.get('/pending-organizers', jwtAuth, authController.getPendingOrganizers);

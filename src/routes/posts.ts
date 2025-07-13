@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import * as postController from '../controllers/postController';
-import { jwtAuth } from '../middleware/auth';
+import { jwtAuth, jwtAuthOptional } from '../middleware/auth';
 import { roleGuard } from '../middleware/roleGuard';
 import { createPostSchema, updatePostSchema, likePostSchema, unlikePostSchema, approvePostSchema } from '../validators/posts';
 
@@ -18,7 +18,7 @@ const posts = new Hono();
 
 posts.post('/', jwtAuth, roleGuard(['admin', 'tournament_organizer']), zValidator('json', createPostSchema), postController.createPost);
 posts.get('/', postController.listPosts);
-posts.get('/:id', postController.getPost);
+posts.get('/:id', jwtAuthOptional, postController.getPost);
 posts.put('/:id', jwtAuth, roleGuard('admin'), zValidator('json', updatePostSchema), postController.updatePost);
 posts.delete('/:id', jwtAuth, roleGuard('admin'), postController.deletePost);
 
