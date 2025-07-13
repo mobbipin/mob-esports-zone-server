@@ -14,6 +14,7 @@
     "@types/nodemailer": "^6.4.17",
     "bcryptjs": "^3.0.2",
     "bun-jwt": "^1.0.1",
+    "classnames": "^2.5.1",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.44.2",
     "hono": "^4.8.2",
