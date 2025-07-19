@@ -42,8 +42,13 @@ export const createPendingTournament = async (c: any) => {
     return c.json({ status: false, error: 'Unauthorized to create tournaments' }, 403);
   }
   
-  // Check if organizer is approved
-  if (!user.isApproved) {
+  // Check if organizer is approved by querying the database directly
+  const { results: userResults } = await c.env.DB.prepare('SELECT isApproved FROM User WHERE id = ?').bind(user.id).all();
+  if (!userResults.length) {
+    return c.json({ status: false, error: 'User not found' }, 404);
+  }
+  
+  if (!userResults[0].isApproved) {
     return c.json({ status: false, error: 'Your account is pending admin approval. You cannot create tournaments yet.' }, 403);
   }
   
@@ -128,8 +133,13 @@ export const createPendingPost = async (c: any) => {
     return c.json({ status: false, error: 'Unauthorized to create posts' }, 403);
   }
   
-  // Check if organizer is approved
-  if (!user.isApproved) {
+  // Check if organizer is approved by querying the database directly
+  const { results: userResults } = await c.env.DB.prepare('SELECT isApproved FROM User WHERE id = ?').bind(user.id).all();
+  if (!userResults.length) {
+    return c.json({ status: false, error: 'User not found' }, 404);
+  }
+  
+  if (!userResults[0].isApproved) {
     return c.json({ status: false, error: 'Your account is pending admin approval. You cannot create posts yet.' }, 403);
   }
   
@@ -500,8 +510,13 @@ export const updatePendingTournament = async (c: any) => {
     return c.json({ status: false, error: 'Unauthorized to edit tournaments' }, 403);
   }
   
-  // Check if organizer is approved
-  if (!user.isApproved) {
+  // Check if organizer is approved by querying the database directly
+  const { results: userResults } = await c.env.DB.prepare('SELECT isApproved FROM User WHERE id = ?').bind(user.id).all();
+  if (!userResults.length) {
+    return c.json({ status: false, error: 'User not found' }, 404);
+  }
+  
+  if (!userResults[0].isApproved) {
     return c.json({ status: false, error: 'Your account is pending admin approval. You cannot edit tournaments yet.' }, 403);
   }
   
@@ -537,8 +552,13 @@ export const updatePendingPost = async (c: any) => {
     return c.json({ status: false, error: 'Unauthorized to edit posts' }, 403);
   }
   
-  // Check if organizer is approved
-  if (!user.isApproved) {
+  // Check if organizer is approved by querying the database directly
+  const { results: userResults } = await c.env.DB.prepare('SELECT isApproved FROM User WHERE id = ?').bind(user.id).all();
+  if (!userResults.length) {
+    return c.json({ status: false, error: 'User not found' }, 404);
+  }
+  
+  if (!userResults[0].isApproved) {
     return c.json({ status: false, error: 'Your account is pending admin approval. You cannot edit posts yet.' }, 403);
   }
   

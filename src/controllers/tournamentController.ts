@@ -49,10 +49,16 @@ export const createTournament = async (c: any) => {
   
   // Tournament organizers need email verification and admin approval
   if (user.role === 'tournament_organizer') {
-    if (!user.emailVerified) {
+    // Check email verification by querying the database directly
+    const { results: userResults } = await c.env.DB.prepare('SELECT emailVerified, isApproved FROM User WHERE id = ?').bind(user.id).all();
+    if (!userResults.length) {
+      return c.json({ status: false, error: 'User not found' }, 404);
+    }
+    
+    if (!userResults[0].emailVerified) {
       return c.json({ status: false, error: 'Please verify your email before creating tournaments' }, 403);
     }
-    if (!user.isApproved) {
+    if (!userResults[0].isApproved) {
       return c.json({ status: false, error: 'Your account is pending admin approval. You cannot create tournaments yet.' }, 403);
     }
   }
@@ -335,8 +341,13 @@ export const registerTeam = async (c: any) => {
   
   const tournamentData = tournament[0];
   
-  // Check if user is verified
-  if (!user.emailVerified) {
+  // Check if user is verified by querying the database directly
+  const { results: userResults } = await c.env.DB.prepare('SELECT emailVerified FROM User WHERE id = ?').bind(user.id).all();
+  if (!userResults.length) {
+    return c.json({ status: false, error: 'User not found' }, 404);
+  }
+  
+  if (!userResults[0].emailVerified) {
     return c.json({ status: false, error: 'Please verify your email before registering for tournaments' }, 403);
   }
   

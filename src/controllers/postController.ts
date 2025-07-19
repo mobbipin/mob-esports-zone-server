@@ -32,10 +32,16 @@ export const createPost = async (c: any) => {
   
   // Tournament organizers need email verification and admin approval
   if (user.role === 'tournament_organizer') {
-    if (!user.emailVerified) {
+    // Check email verification by querying the database directly
+    const { results: userResults } = await c.env.DB.prepare('SELECT emailVerified, isApproved FROM User WHERE id = ?').bind(user.id).all();
+    if (!userResults.length) {
+      return c.json({ status: false, error: 'User not found' }, 404);
+    }
+    
+    if (!userResults[0].emailVerified) {
       return c.json({ status: false, error: 'Please verify your email before creating posts' }, 403);
     }
-    if (!user.isApproved) {
+    if (!userResults[0].isApproved) {
       return c.json({ status: false, error: 'Your account is pending admin approval. You cannot create posts yet.' }, 403);
     }
   }
