@@ -74,10 +74,10 @@ export const createPendingTournament = async (c: any) => {
     await c.env.DB.prepare(
       'INSERT INTO PendingTournament (id, name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, type, imageUrl, createdBy, createdAt, originalId, action) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
-      id, parse.data.name, parse.data.description, parse.data.game, 
-      parse.data.startDate, parse.data.endDate, parse.data.maxTeams, 
-      parse.data.prizePool, parse.data.entryFee, parse.data.rules, 
-      parse.data.type, parse.data.imageUrl, user.id, createdAt, parse.data.originalId, 'update'
+      id, parse.data.name || null, parse.data.description || null, parse.data.game || null, 
+      parse.data.startDate || null, parse.data.endDate || null, parse.data.maxTeams || null, 
+      parse.data.prizePool || null, parse.data.entryFee || null, parse.data.rules || null, 
+      parse.data.type || null, parse.data.imageUrl || null, user.id, createdAt, parse.data.originalId || null, 'update'
     ).run();
     
     return c.json({ status: true, data: { id }, message: 'Tournament update submitted for review' });
@@ -95,10 +95,10 @@ export const createPendingTournament = async (c: any) => {
     await c.env.DB.prepare(
       'INSERT INTO PendingTournament (id, name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, type, imageUrl, createdBy, createdAt, originalId, action) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
-      id, originalTournament[0].name, originalTournament[0].description, originalTournament[0].game, 
-      originalTournament[0].startDate, originalTournament[0].endDate, originalTournament[0].maxTeams, 
-      originalTournament[0].prizePool, originalTournament[0].entryFee, originalTournament[0].rules, 
-      originalTournament[0].type, originalTournament[0].imageUrl, user.id, createdAt, parse.data.originalId, 'delete'
+      id, originalTournament[0].name || null, originalTournament[0].description || null, originalTournament[0].game || null, 
+      originalTournament[0].startDate || null, originalTournament[0].endDate || null, originalTournament[0].maxTeams || null, 
+      originalTournament[0].prizePool || null, originalTournament[0].entryFee || null, originalTournament[0].rules || null, 
+      originalTournament[0].type || null, originalTournament[0].imageUrl || null, user.id, createdAt, parse.data.originalId || null, 'delete'
     ).run();
     
     return c.json({ status: true, data: { id }, message: 'Tournament deletion submitted for review' });
@@ -111,10 +111,10 @@ export const createPendingTournament = async (c: any) => {
     await c.env.DB.prepare(
       'INSERT INTO PendingTournament (id, name, description, game, startDate, endDate, maxTeams, prizePool, entryFee, rules, type, imageUrl, createdBy, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
-      id, parse.data.name, parse.data.description, parse.data.game, 
-      parse.data.startDate, parse.data.endDate, parse.data.maxTeams, 
-      parse.data.prizePool, parse.data.entryFee, parse.data.rules, 
-      parse.data.type, parse.data.imageUrl, user.id, createdAt
+      id, parse.data.name || null, parse.data.description || null, parse.data.game || null, 
+      parse.data.startDate || null, parse.data.endDate || null, parse.data.maxTeams || null, 
+      parse.data.prizePool || null, parse.data.entryFee || null, parse.data.rules || null, 
+      parse.data.type || null, parse.data.imageUrl || null, user.id, createdAt
     ).run();
     
     return c.json({ status: true, data: { id }, message: 'Tournament submitted for review' });
@@ -165,7 +165,7 @@ export const createPendingPost = async (c: any) => {
     await c.env.DB.prepare(
       'INSERT INTO PendingPost (id, title, content, imageUrl, createdBy, createdAt, originalId, action) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
-      id, parse.data.title, parse.data.content, parse.data.imageUrl, user.id, createdAt, parse.data.originalId, 'update'
+      id, parse.data.title || null, parse.data.content || null, parse.data.imageUrl || null, user.id, createdAt, parse.data.originalId || null, 'update'
     ).run();
     
     return c.json({ status: true, data: { id }, message: 'Post update submitted for review' });
@@ -183,7 +183,7 @@ export const createPendingPost = async (c: any) => {
     await c.env.DB.prepare(
       'INSERT INTO PendingPost (id, title, content, imageUrl, createdBy, createdAt, originalId, action) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
-      id, originalPost[0].title, originalPost[0].content, originalPost[0].imageUrl, user.id, createdAt, parse.data.originalId, 'delete'
+      id, originalPost[0].title || null, originalPost[0].content || null, originalPost[0].imageUrl || null, user.id, createdAt, parse.data.originalId || null, 'delete'
     ).run();
     
     return c.json({ status: true, data: { id }, message: 'Post deletion submitted for review' });
@@ -195,7 +195,7 @@ export const createPendingPost = async (c: any) => {
     
     await c.env.DB.prepare(
       'INSERT INTO PendingPost (id, title, content, imageUrl, createdBy, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
-    ).bind(id, parse.data.title, parse.data.content, parse.data.imageUrl, user.id, createdAt).run();
+    ).bind(id, parse.data.title || null, parse.data.content || null, parse.data.imageUrl || null, user.id, createdAt).run();
     
     return c.json({ status: true, data: { id }, message: 'Post submitted for review' });
   }
@@ -530,10 +530,10 @@ export const updatePendingTournament = async (c: any) => {
   await c.env.DB.prepare(
     'UPDATE PendingTournament SET name = ?, description = ?, game = ?, startDate = ?, endDate = ?, maxTeams = ?, prizePool = ?, entryFee = ?, rules = ?, type = ?, imageUrl = ? WHERE id = ?'
   ).bind(
-    parse.data.name, parse.data.description, parse.data.game, 
-    parse.data.startDate, parse.data.endDate, parse.data.maxTeams, 
-    parse.data.prizePool, parse.data.entryFee, parse.data.rules, 
-    parse.data.type, parse.data.imageUrl, id
+    parse.data.name || null, parse.data.description || null, parse.data.game || null, 
+    parse.data.startDate || null, parse.data.endDate || null, parse.data.maxTeams || null, 
+    parse.data.prizePool || null, parse.data.entryFee || null, parse.data.rules || null, 
+    parse.data.type || null, parse.data.imageUrl || null, id
   ).run();
   
   return c.json({ status: true, message: 'Tournament updated successfully' });
@@ -571,7 +571,7 @@ export const updatePendingPost = async (c: any) => {
   // Update the post
   await c.env.DB.prepare(
     'UPDATE PendingPost SET title = ?, content = ?, imageUrl = ? WHERE id = ?'
-  ).bind(parse.data.title, parse.data.content, parse.data.imageUrl, id).run();
+  ).bind(parse.data.title || null, parse.data.content || null, parse.data.imageUrl || null, id).run();
   
   return c.json({ status: true, message: 'Post updated successfully' });
 };
